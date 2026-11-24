@@ -1,0 +1,46 @@
+<% content_for :title, "Google Search Console" %>
+<header class="page-heading"><div><h1>Google Search Console</h1><p>See final Google Web clicks, impressions and average position for your property. Daily local keyword positions appear on the Rankings screen.</p></div></header>
+<section class="panel">
+  <h2>Connection</h2>
+  <p><strong><%= @connection&.status&.humanize || "Not connected" %></strong> · <%= current_site.host %></p>
+  <% unless @configured %><p>Google sign-in is unavailable until the app administrator configures the OAuth client.</p><% end %>
+  <% if @connection&.last_error.present? %><p role="status"><%= @connection.last_error %></p><% end %>
+  <% if workspace_owner? && @configured %>
+    <p>Google will ask for read-only access to Search Console. This app imports final Web performance for the root property you choose.</p>
+    <%= button_to @connection&.refresh_token.present? ? "Reconnect Google" : "Connect Google", authorize_search_console_path, data: { turbo: false } %>
+    <% if @connection&.allowed_properties.present? %>
+      <%= form_with url: search_console_path, method: :patch do |f| %>
+        <%= f.label :property, "Verified root property" %>
+        <%= f.select :property, options_for_select(@connection.allowed_properties, @connection.property), {prompt: "Select a property"}, required: true %>
+        <%= f.submit "Use this property" %>
+      <% end %>
+    <% elsif @connection&.status == "choose_property" %>
+      <p>Verify a matching domain or root URL-prefix property in Search Console, or ask its owner to grant your Google account access. Then reconnect.</p>
+    <% end %>
+    <% if @connection&.property && @connection.status != "reconnect" %><%= button_to "Refresh report", sync_search_console_path %><% end %>
+  <% end %>
+  <% if workspace_owner? && @connection %>
+    <p>Disconnecting removes this site's saved Google tokens and report history. To revoke this app across all sites using your Google Account, use <%= link_to "Google Account connections", "https://myaccount.google.com/connections" %>.</p>
+    <%= button_to "Disconnect and remove reports", search_console_path, method: :delete, form: { data: { turbo_confirm: "Disconnect Google and remove this site's stored reports?" } } %>
+  <% end %>
+</section>
+<% if @connection&.property %>
+<section class="panel">
+  <h2>Property report</h2><p><strong><%= @connection.property %></strong> · All countries · Web search · Pacific reporting dates. Totals cover the entire selected property, including any subdomains within a domain property. Page details below show only the site host and its www alias.</p>
+  <% if (report = @connection.report).present? %>
+    <p>Last successful import <%= @connection.synced_at.in_time_zone(current_site.time_zone).strftime("%d %b %Y %H:%M %Z") %>. Latest day returned by Google <%= report["last_reported_day"] || "unavailable" %>.</p>
+    <table><thead><tr><th>Period</th><th>Clicks</th><th>Impressions</th><th>Click-through rate</th><th>Average position</th></tr></thead><tbody>
+      <% %w[current previous].each do |period| %><% entry = report.fetch(period); metrics = entry["metrics"] %>
+        <tr><th scope="row"><%= entry["start"] %> – <%= entry["end"] %></th><td><%= metrics&.fetch("clicks") || "Unavailable" %></td><td><%= metrics&.fetch("impressions") || "Unavailable" %></td><td><%= metrics ? number_to_percentage(metrics["ctr"] * 100, precision: 1) : "Unavailable" %></td><td><%= metrics ? number_with_precision(metrics["position"], precision: 1) : "Unavailable" %></td></tr>
+      <% end %>
+    </tbody></table>
+    <h3>Tracked searches and landing pages</h3><p>Google can omit low-volume searches. Details cover up to 20 tracked terms. The table displays up to 50 available rows. Property totals use a separate request.</p>
+    <% if report["partial_detail"] %><p>Detail coverage is partial.</p><% end %>
+    <% if report.fetch("keyword_pages", []).empty? %><p>No matching search and page rows were available.</p><% else %>
+      <table><thead><tr><th>Search</th><th>Page</th><th>Device</th><th>Clicks</th><th>Impressions</th></tr></thead><tbody>
+      <% report["keyword_pages"].take(50).each do |r| %><tr><td><%= r["keyword"] %></td><td style="overflow-wrap:anywhere"><%= r["page"] %></td><td><%= r["device"] %></td><td><%= r["clicks"] %></td><td><%= r["impressions"] %></td></tr><% end %>
+      </tbody></table>
+    <% end %>
+  <% else %><p>Waiting for the first successful import.</p><% end %>
+</section>
+<% end %>

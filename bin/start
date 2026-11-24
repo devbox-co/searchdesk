@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+set -eu
+cd "$(dirname "$0")/.."
+if [ ! -f .env ]; then
+  (umask 077
+   temp_env=$(mktemp .env.setup.XXXXXX)
+   trap 'rm -f "$temp_env"' EXIT
+   printf 'SECRET_KEY_BASE=%s\nPOSTGRES_PASSWORD=%s\n' "$(openssl rand -hex 64)" "$(openssl rand -hex 24)" > "$temp_env"
+   cat .env.example >> "$temp_env"
+   # Link rather than replace to preserve another simultaneous first start.
+   ln "$temp_env" .env 2>/dev/null || test -f .env)
+fi
+docker compose build web
+docker compose up --no-build --detach --wait
+printf '\nSEO workspace is available at http://localhost:%s\n' "$(docker compose port web 3000 | awk -F: '{print $NF}')"

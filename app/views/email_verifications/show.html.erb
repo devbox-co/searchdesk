@@ -1,0 +1,3 @@
+<h1>Confirm your email address</h1>
+<p>Confirm <%= current_user.email %> so that another workspace owner can grant this account access.</p>
+<%= button_to "Verify my email", verify_email_path(@token), method: :post %>

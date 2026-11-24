@@ -1,0 +1,20 @@
+<% content_for :title, "Action preview" %>
+<div class="form-page">
+  <%= link_to "← Actions", actions_path, class: "back" %>
+  <p class="eyebrow">Action preview</p>
+  <h1><%= @action.title %></h1>
+  <p><%= @action.keyword.phrase %> · <%= @action.tracking_series.device.capitalize %> · <%= compact_date(@action.observed_on) %></p>
+  <% if @historical %><p class="notice">This evidence is more than a day old. Check a fresh observation for this keyword and device before making changes.</p><% end %>
+  <p><%= @action.description %></p>
+  <% if @draft %>
+    <h2>Review steps</h2>
+    <ol><% @draft.instructions.each do |step| %><li><%= step %></li><% end %></ol>
+    <details class="guide"><summary>Review receipt</summary>
+      <p>Prepared <%= compact_date(@draft.created_at) %> using <%= @draft.skill_version %>.</p>
+      <p>Evidence captured for <%= @draft.input_snapshot["location"] %> on <%= @draft.input_snapshot["observed_on"] %>.</p>
+      <small>Reference <%= @draft.input_digest.first(12) %></small>
+    </details>
+  <% else %><p class="notice">A review for this evidence has not been prepared.</p><% end %>
+  <% if @wording.present? %><section><h2>Approved business wording</h2><p><%= @wording %></p></section><% end %>
+  <%= link_to "View ranking evidence", keyword_path(@action.keyword, device: @action.tracking_series.device), class: "button" %>
+</div>

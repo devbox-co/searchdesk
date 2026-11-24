@@ -1,0 +1,11 @@
+id: business_wording
+version: v1
+origin: In-house
+handler: SeoSkills::WordingClient
+mode: optional_model
+trigger: A workspace owner consents to sending a new revision of public service descriptions
+inputs: [approved_public_lines]
+output: One integer naming an existing line by its one-based index
+freshness: A pending wording revision expires after 24 hours
+external_calls: At most one per revision and three per site per UTC day
+resource: prompt.txt

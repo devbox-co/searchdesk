@@ -1,0 +1,8 @@
+<h1>Verify your email</h1>
+<p><%= current_user.email %></p>
+<% if current_user.email_verified_at %>
+  <p>Your email address is verified.</p>
+<% else %>
+  <p>Verify this address before another workspace can grant your account access.</p>
+  <%= button_to "Send verification link", email_verification_path %>
+<% end %>

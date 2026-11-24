@@ -1,0 +1,11 @@
+<% content_for :title, "Import observation" %><div class="form-page"><%= link_to "← Keyword", keyword_path(@keyword), class: "back" %>
+<h1>Import an observation</h1><p>Upload one JSON file or paste its contents for <strong><%= @keyword.phrase %></strong>. Supply the observed time with its offset and the original ordered organic result positions.</p>
+<% if @error %><p class="errors" role="alert"><%= @error %></p><% end %>
+<%= form_with scope: :rank_import, url: keyword_rank_imports_path(@keyword), class: "stack", multipart: true do |f| %>
+<%= f.label :device %><%= f.select :device, @keyword.tracking_series.current.pluck(:device).map { |d| [d.capitalize,d] }, selected: params.dig(:rank_import, :device).presence || params[:device].presence || "mobile" %>
+<%= f.label :file, "JSON file (up to 256 KiB)" %><%= f.file_field :file, accept: ".json,application/json" %>
+<%= f.label :payload, "Or paste JSON" %><%= f.text_area :payload, rows: 7, spellcheck: false %>
+<%= f.submit "Import observation", class: "button solid" %>
+<% end %>
+<details class="guide"><summary>Required JSON format</summary><p>Replace the timestamp and sample results with the actual observation. Use all observed top-level organic results in their source order.</p>
+<pre><%= JSON.pretty_generate(keyword: @keyword.phrase, location: current_site.location, language: current_site.language, device: params.dig(:rank_import, :device).presence || params[:device].presence || "mobile", host: current_site.host, depth: 30, source: "manual", captured_at: Time.current.in_time_zone(current_site.time_zone).iso8601, items: [{type: "organic", rank_group: 1, url: "https://example.org/service/"}]) %></pre></details></div>

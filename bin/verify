@@ -1,0 +1,16 @@
+#!/bin/sh
+set -eu
+cd "$(dirname "$0")/.."
+test -f .env || { echo "Run bin/start once to initialise the local installation."; exit 1; }
+docker compose build web
+docker compose up --wait --detach db
+# Keep developer credentials and business data outside every acceptance run.
+check() {
+  docker compose run --rm --no-deps -e RAILS_ENV=test \
+    -e DATABASE_URL=postgresql://workspace@db/seo_workspace_test \
+    -e GOOGLE_CLIENT_ID= -e GOOGLE_CLIENT_SECRET= -e DATAFORSEO_ENABLED=false \
+    -e ANTHROPIC_API_KEY= -e SEO_AI_MODEL= -e SMTP_HOST= web bin/rails "$@"
+}
+check db:prepare
+check zeitwerk:check
+check test

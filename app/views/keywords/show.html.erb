@@ -1,0 +1,25 @@
+<% content_for :title, @keyword.phrase %><%= link_to "← Rankings", rankings_path(device: @device), class: "back" %>
+<div class="hero"><div><p class="eyebrow">Keyword history</p><h1><%= @keyword.phrase %></h1><p><%= current_site.location %> · Google organic · <%= current_site.language %></p></div>
+<% if current_site.tracking_mode == "manual" && can_manage_site? %><%= link_to "Import observation", new_keyword_rank_import_path(@keyword, device: @device), class: "button solid" %><% end %></div>
+<div class="toolbar"><div class="segments"><% %w[mobile desktop].each do |device| %><%= link_to device.capitalize, keyword_path(@keyword, device: device), aria: {current: device == @device ? "page" : nil} %><% end %></div><%= link_to "View keyword actions", actions_path(keyword_id: @keyword.id) %></div>
+<p class="notice">Preferred page · <%= @keyword.preferred_url.presence || "Unassigned" %></p>
+<% if can_manage_site? %><details class="guide"><summary>Change preferred page</summary>
+<%= form_with scope: :keyword, url: preferred_page_keyword_path(@keyword), method: :patch do |f| %>
+  <%= hidden_field_tag :device, @device %>
+  <%= f.label :preferred_url, "Page you want to rank for this search" %>
+  <%= f.url_field :preferred_url, value: @keyword.preferred_url, maxlength: 2048 %>
+  <%= f.submit "Save preferred page", class: "button" %>
+<% end %></details><% end %>
+<% if @series %>
+  <p>Observation source · <%= @series.source == "demo" ? "Simulated demonstration" : @series.source.humanize %></p>
+  <div class="toolbar"><div class="segments" aria-label="History period"><% [["7", "7 days"], ["30", "30 days"], ["all", "All history"]].each do |value, label| %>
+    <%= link_to label, keyword_path(@keyword, device: @device, range: value), aria: {current: @range == value ? "page" : nil} %>
+  <% end %></div>
+  <% if can_manage_site? %><%= button_to @series.paused? ? "Resume tracking" : "Pause tracking", keyword_path(@keyword), method: :patch, params: {tracking: @series.paused? ? "resume" : "pause", device: @device}, class: "button" %><% end %></div>
+  <% if @series.paused? %><p role="status">Tracking is paused for this device.</p><% end %>
+<% end %>
+<% if @slots.empty? %><div class="empty"><h2>Awaiting the first observation</h2><p>The baseline starts with the first comparable reading for this location and device.</p></div><% else %>
+<div class="tablewrap" tabindex="0" role="region" aria-label="Past observations"><table><thead><tr><th>Date</th><th>Rank</th><th>Status</th><th>Ranking page</th></tr></thead><tbody>
+<% @slots.each do |slot| %><% obs = slot.rank_observation %><tr><td><%= compact_date(slot.day) %><% if obs %><small><%= obs.captured_at.in_time_zone(current_site.time_zone).strftime("%H:%M %Z") %></small><% end %></td><td><%= rank_value(obs&.position, obs&.status) %></td><td><%= (obs&.status || slot.status).humanize %><% if slot.reason.present? %><small><%= slot.reason %></small><% end %></td><td><%= obs&.winning_url.presence || "—" %></td></tr><% end %>
+</tbody></table></div><% end %>
+<% if @more %><p><%= link_to "Older observations", keyword_path(@keyword, device: @device, range: @range, before: @slots.last.day) %></p><% end %>

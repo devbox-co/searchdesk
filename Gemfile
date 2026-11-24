@@ -1,0 +1,11 @@
+source "https://rubygems.org"
+ruby file: ".ruby-version"
+
+gem "rails", "~> 8.1.4", ">= 8.1.4.1"
+gem "pg", "~> 1.7"
+gem "puma", "~> 8.1"
+gem "bcrypt", "~> 3.1", ">= 3.1.22"
+gem "solid_queue", "~> 1.7", ">= 1.7.2"
+gem "propshaft", "~> 1.3", ">= 1.3.2"
+gem "importmap-rails", "~> 2.2", ">= 2.2.3"
+gem "turbo-rails", "~> 2.0", ">= 2.0.23"

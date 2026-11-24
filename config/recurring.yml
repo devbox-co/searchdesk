@@ -1,0 +1,19 @@
+default: &default
+  clear_finished_jobs:
+    command: "SolidQueue::Job.clear_finished_in_batches(finished_before: 7.days.ago)"
+    schedule: every day at 03:30 UTC
+  wording_recovery:
+    class: WordingRecoveryJob
+    schedule: every 10 minutes
+  search_console_daily:
+    class: SearchConsoleSyncJob
+    schedule: every 15 minutes
+  tracking_slot_dispatch:
+    class: TrackingScheduleJob
+    schedule: every 5 minutes
+
+development:
+  <<: *default
+production:
+  <<: *default
+test: {}

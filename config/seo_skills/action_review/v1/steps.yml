@@ -1,0 +1,9 @@
+steps:
+  page_match:
+    - Open the preferred page and the page that appeared. Compare which one answers the search most directly.
+    - Check the page title, main heading and internal links on the preferred page. Record one change you would make and why.
+    - After any approved edit, save its date and compare future readings for the same keyword, location and device.
+  rank_drop:
+    - Check the two daily readings and the starting observation. Look for a change in which page appeared.
+    - Review the page's query and click history in Search Console if available. Record any recent page or site edits.
+    - Choose a change only when the page evidence supports it. Compare subsequent daily readings in this series.

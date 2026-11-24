@@ -1,0 +1,16 @@
+<% content_for :title, @entry.name %><div class="form-page"><%= link_to "← Integrations", integrations_path, class: "back" %><p class="eyebrow"><%= @entry.group %></p>
+<h1><%= @entry.name %></h1><p><%= @entry.description %></p><dl class="facts">
+<dt>Site</dt><dd><%= current_site.host %></dd><dt>Access method</dt><dd><%= @entry.mode %></dd><dt>Status</dt><dd><%= integration_state(@entry)[:label] %></dd></dl>
+<% if @entry.key == "google-search-console" %>
+  <p><%= integration_state(@entry)[:detail] %></p><%= link_to workspace_owner? ? "Set up Search Console" : "View Search Console", search_console_path, class: "button solid" %>
+<% elsif @entry.key == "local-falcon" %>
+  <% if @report_link.persisted? && @report_link.valid? %><p><%= link_to "Open saved report ↗", @report_link.url, target: "_blank", rel: "noopener noreferrer", class: "button" %></p><p class="muted">Saved <%= compact_date(@report_link.updated_at) %>. Data stays with Local Falcon.</p><% end %>
+  <% if can_manage_site? %><%= render "shared/errors", record: @report_link %>
+    <%= form_with scope: :site_report_link, url: integration_path(@entry.key), method: :patch, class: "stack" do |f| %><%= f.label :url, "Shared report URL" %><%= f.url_field :url, value: @report_link.url, required: true, maxlength: 512, placeholder: "https://app.localfalcon.com/reports/view/REPORT_ID" %><%= f.submit "Save report link", class: "button solid" %><% end %>
+    <% if @report_link.persisted? %><%= button_to "Remove saved link", integration_path(@entry.key), method: :patch, params: {remove: "1"}, class: "text-button" %><% end %>
+  <% end %>
+<% elsif @entry.key == "rank-import" %><p>Choose a keyword in the watchlist, then open its import screen on a manual site.</p><%= link_to "Open rankings", rankings_path, class: "button" %>
+<% elsif @entry.key == "dataforseo" %><p>Inspect each scheduled reading in the keyword's history.</p><%= link_to "Open rankings", rankings_path, class: "button" %>
+<% elsif (url = IntegrationCatalogue::PORTALS[@entry.key]) %><%= link_to "Open provider ↗", url, target: "_blank", rel: "noopener noreferrer", class: "button" %>
+<% elsif @entry.key == "website" %><%= link_to "Open website ↗", "https://#{current_site.host}/", target: "_blank", rel: "noopener noreferrer", class: "button" %>
+<% else %><p class="notice">This adapter is planned. Account credentials are not collected.</p><% end %></div>

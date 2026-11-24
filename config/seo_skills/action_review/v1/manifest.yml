@@ -1,0 +1,11 @@
+id: action_review
+version: v1
+origin: In-house
+handler: SeoSkills::ActionReview
+mode: deterministic
+trigger: Accepted ranking evidence or a manager requesting its review
+inputs: [kind, observed_on, phrase, device, location, evidence]
+output: A dated receipt with an ordered list of review steps and a digest of the inputs
+freshness: Today or yesterday in the site time zone for a current recommendation
+external_calls: 0
+resource: steps.yml

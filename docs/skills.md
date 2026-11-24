@@ -1,0 +1,19 @@
+# Shipped SEO skills
+
+The Rails application runs two in-house recipes. Each version includes its declared input, output, resource and execution mode under `config/seo_skills/<id>/<version>/`. The fixed Ruby registry validates the recipe and resolves its handler at boot. A site cannot upload instructions, extend the registry or select an arbitrary handler.
+
+## Keyword action review
+
+An accepted daily organic observation can trigger a page mismatch, or a decline of at least three positions from baseline on two consecutive observed days. The tracking rule supplies the observation IDs and site-specific evidence. The review recipe chooses an ordered set of checks for that rule. It stores the observed date, keyword, device, location, whitelisted supporting fields, recipe version and SHA-256 input digest with the steps. Repeating the same request returns the same receipt. Additional numerical or page evidence produces a new one. A review older than the previous local day tells the manager to refresh the observation.
+
+These checks use established local SEO methods of matching one preferred page to a query and comparing rankings within a consistent device and market. Managers can inspect Google Search Console for supporting first-party page evidence. The app’s rules, steps and tests are original. [Google Search Console performance report](https://support.google.com/webmasters/answer/7576553) · [Google Search Central SEO starter guide](https://developers.google.com/search/docs/fundamentals/seo-starter-guide)
+
+### Method provenance
+
+Garrett Smith's keyword research and reporting guides informed the choice of a preferred page per query and consistent reporting scope. Local SEO Brain's claim ledger informed the dated evidence receipt. Claude SEO's on-page review informed the manager's title and heading checks. These links identify the design references at the reviewed revisions. The shipped Ruby rules, templates and wording-selection prompt were authored for Searchdesk. [Keyword research](https://github.com/garrettjsmith/localseoskills/blob/c3b7a25b7d5cc370752d74cfea240ccf992a24db/skills/local-keyword-research/SKILL.md) · [Local reporting](https://github.com/garrettjsmith/localseoskills/blob/c3b7a25b7d5cc370752d74cfea240ccf992a24db/skills/local-reporting/SKILL.md) · [Claim ledger](https://github.com/AI-Marketing-Hub/local-seo-brain/blob/e0dd86f9010085dada9fb6ae128d5a3ef5ff0392/references/claim-ledger.json) · [On-page review](https://github.com/AgriciDaniel/claude-seo/blob/468ed5b0d9e3249394783710e54abb02837e326b/skills/seo-page/SKILL.md)
+
+## Public wording selection
+
+A workspace owner can approve one to six public service descriptions for a single site. A fresh consent revision may transmit those lines to Anthropic with a fixed selection instruction and a model configured by the operator. The model can only return the one-based index of an existing line. The request contains no ranking history, page URL, internal identifier or user account field. The owner must check that the phrases contain public copy, including names or details that text validation cannot recognize.
+
+The default installation uses local review steps. The optional selector requires an API key, a model and recorded owner consent. The job reserves one attempt before dispatch and serializes dispatch against revocation. A pending revision expires after 24 hours. Three attempts per site per UTC day is a request cap. Timeouts and interrupted requests consume their reservation. A lost response falls back to local steps. Disabling wording clears the descriptions and prior choice and preserves the minimal attempt ledger. A provider request that already started can complete before revocation is acknowledged. [Anthropic Messages API](https://platform.claude.com/docs/en/api/messages/create)

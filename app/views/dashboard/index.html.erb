@@ -1,0 +1,24 @@
+<% content_for :title, "Rankings" %>
+<div class="hero"><div><p class="eyebrow"><%= current_site.host %></p><h1>Daily keyword rankings</h1><p>Google organic · <%= current_site.location %> · <%= current_site.language %></p></div>
+<% if can_manage_site? %><%= link_to "Add keyword", new_keyword_path, class: "button solid" %><% end %></div>
+<div class="toolbar"><div class="segments" aria-label="Ranking device"><% %w[mobile desktop].each do |device| %><%= link_to device.capitalize, rankings_path(device: device, day: @day), aria: {current: device == @device ? "page" : nil} %><% end %></div>
+<%= form_with url: rankings_path, method: :get, class: "date-filter" do |f| %><%= hidden_field_tag :device, @device %><%= f.label :day, "Observation date" %><%= f.date_field :day, value: @day, max: @today, required: true %><%= f.submit "Show", class: "button" %><% end %></div>
+<% if current_site.tracking_mode == "demo" %><p class="notice">Demo site · all keyword observations on this site are synthetic.</p><% end %>
+<% if @rows.empty? %>
+<div class="empty"><h2>Your watchlist is empty</h2><p>Add a search phrase that a customer would use to find one of your services.</p><% if can_manage_site? %><%= link_to "Add the first keyword", new_keyword_path, class: "button" %><% end %></div>
+<% else %>
+<section class="metrics" aria-label="Watchlist summary">
+  <div><span>Tracked keywords</span><strong><%= @rows.length %></strong></div>
+  <div><span>In Google's top 10</span><strong><%= @rows.count { |row| row[:rank] && row[:rank] <= 10 } %></strong></div>
+  <div><span>Open actions now</span><strong><%= link_to @open_action_count, actions_path, aria: { label: "View all #{@open_action_count} open actions for this site" } %></strong></div>
+</section>
+<div class="tablewrap" tabindex="0" role="region" aria-label="Keyword rankings"><table>
+  <thead><tr><th scope="col">Keyword</th><th scope="col">Start</th><th scope="col"><%= @day == @today ? "Today" : compact_date(@day) %></th><th scope="col">Since start</th><th scope="col">Ranking page</th></tr></thead>
+  <tbody><% @rows.each do |row| %><tr>
+    <td><%= link_to row[:keyword].phrase, keyword_path(row[:keyword], device: @device) %><% if row[:winning_url].present? %><small class="mobile-page">Ranking page · <%= ranking_page_label(row[:winning_url]) %></small><% end %></td>
+    <td><%= rank_value(row[:baseline_rank], row[:baseline]&.status, fallback: "Awaiting start") %><small><%= compact_date(row[:baseline]&.daily_slot&.day) %></small></td>
+    <td><strong><%= rank_value(row[:rank], row[:status]) %></strong><small><%= row[:status].to_s.humanize %></small><small class="mobile-movement move <%= row[:transition] %>">Since start · <%= movement_label(row) %></small><% if row[:as_of] && row[:as_of] != @day %><small>Last observed <%= compact_date(row[:as_of]) %></small><% end %></td>
+    <td><span class="move <%= row[:transition] %>"><%= movement_label(row) %></span></td>
+    <td><%= row[:winning_url].presence || "—" %></td>
+  </tr><% end %></tbody></table></div>
+<% end %>

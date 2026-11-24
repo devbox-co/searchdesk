@@ -1,0 +1,52 @@
+#!/usr/bin/env ruby
+# Reports drift without updating packages, changing data or starting services.
+require "bundler"
+require "json"
+require "net/http"
+require "uri"
+
+def fetch(url)
+  address = URI(url)
+  response = Net::HTTP.start(address.host, 443, use_ssl: true, open_timeout: 8, read_timeout: 15) do |client|
+    client.get(address.request_uri, "User-Agent" => "Searchdesk dependency review")
+  end
+  response.value
+  response.body
+end
+
+def latest_gem(name)
+  JSON.parse(fetch("https://rubygems.org/api/v1/versions/#{name}/latest.json")).fetch("version")
+end
+
+Dir.chdir(File.expand_path("..", __dir__))
+lock = Bundler::LockfileParser.new(File.read("Gemfile.lock"))
+checks = {}
+lock.dependencies.each_key do |name|
+  checks[name] = [lock.specs.find { |spec| spec.name == name }.version.to_s, -> { latest_gem(name) }]
+end
+checks["Bundler"] = [lock.bundler_version.to_s, -> { latest_gem("bundler") }]
+checks["RubyGems"] = [Gem::VERSION, -> { latest_gem("rubygems-update") }]
+checks["Ruby"] = [File.read(".ruby-version").strip, lambda {
+  fetch("https://www.ruby-lang.org/en/downloads/")[/current stable version is\s*(?:<[^>]+>)*\s*(\d+\.\d+\.\d+)/i, 1]
+}]
+checks["PostgreSQL (local)"] = [File.read("compose.yaml")[/image: postgres:(\d+\.\d+)/, 1], lambda {
+  html = fetch("https://www.postgresql.org/support/versioning/")
+  html.scan(/<td>\s*(\d+\.\d+)\s*<\/td>/).flatten.map { |version| Gem::Version.new(version) }.max&.to_s
+}]
+
+drift = false
+unavailable = false
+checks.each do |label, (installed, lookup)|
+  begin
+    latest = lookup.call
+    raise "no stable version found" if latest.to_s.empty? || installed.to_s.empty?
+    current = Gem::Version.new(installed) == Gem::Version.new(latest)
+    puts "#{label.ljust(22)} pinned #{installed.ljust(12)} upstream #{latest}#{'  (review)' unless current}"
+    drift ||= !current
+  rescue StandardError => error
+    warn "#{label}: source unavailable (#{error.class})"
+    unavailable = true
+  end
+end
+exit 2 if unavailable
+exit(drift ? 1 : 0)

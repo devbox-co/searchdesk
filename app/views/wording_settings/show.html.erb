@@ -1,0 +1,13 @@
+<% content_for :title, "Business wording" %><p><%= link_to "Back to actions", actions_path %></p>
+<div class="form-page"><h1>Business wording</h1><p>Optionally let the server choose a line of public service copy for action previews. Enter only wording your business approves for sending to Anthropic.</p>
+<% unless SeoSkills::WordingClient.configured? %><p role="status">AI is off on this installation. Action previews use the built-in review steps.</p><% end %>
+<% if @setting.errors.any? %><p role="alert"><%= @setting.errors.full_messages.to_sentence %></p><% end %>
+<%= form_with model: @setting, url: wording_setting_path, method: :patch, class: "stack" do |f| %>
+<label><%= f.check_box :enabled %> Allow sending the lines below to Anthropic for this site</label>
+<p><%= f.label :phrases, "Public service descriptions, one per line" %><br><%= f.text_area :phrases, rows: 5, maxlength: 1000 %></p>
+<p>Use up to six lines. Omit customer information, contact details and links. Each change authorizes one request for 24 hours, up to three attempts per site per UTC day. Turn permission off and save to clear your descriptions and cancel pending selections.</p>
+<%= f.submit "Save preferences", class: "button" %><% end %>
+<% if @setting.persisted? && @setting.enabled? %>
+<p>Selection status · <%= @setting.wording_runs.find_by(revision: @setting.revision)&.status.to_s.humanize %></p>
+<% if @setting.selected_line %><p>Selected line · <%= @setting.selected_line %></p><% end %><% end %>
+</div>

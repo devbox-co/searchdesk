@@ -1,0 +1,12 @@
+<% content_for :title, "Set up a site" %><div class="form-page"><p class="eyebrow">Workspace setup</p><h1>Set up a site</h1><p>Choose the website and the local market where its customers search.</p><%= render "shared/errors", record: @site %>
+<%= form_with scope: :site, url: onboarding_path, class: "stack" do |f| %>
+<%= f.label :tracking_mode, "Observation source" %><%= f.select :tracking_mode, [["Manual · import observed rankings", "manual"], ["Demo · five fictional keywords and sample history", "demo"], ["DataForSEO · managed daily collection", "dataforseo"]], selected: @site&.tracking_mode.presence || "manual" %>
+<p class="hint">Demo mode can supply a sample business if fields are blank. Managed collection requires provider configuration.</p>
+<%= f.label :name, "Business or site name" %><%= f.text_field :name, value: @site&.name, maxlength: 120, placeholder: "Parkside Plumbing" %>
+<%= f.label :host, "Website hostname" %><%= f.text_field :host, value: @site&.host, autocapitalize: "none", placeholder: "parkside.example" %>
+<%= f.label :location, "Search location" %><%= f.text_field :location, value: @site&.location, placeholder: "Norwich, England, United Kingdom" %>
+<%= f.label :rank_country_code, "Search country code (managed tracking)" %><%= f.text_field :rank_country_code, value: @rank_country_code.presence || "GB", maxlength: 2, autocapitalize: "characters", placeholder: "GB" %>
+<p class="hint">For managed tracking, enter a town and a two-letter country code such as GB or US. We match the location with the provider before daily collection begins.</p>
+<%= f.label :language, "Search language code" %><%= f.text_field :language, value: @site&.language.presence || "en", required: true, maxlength: 8 %>
+<%= f.label :time_zone, "Reporting time zone" %><%= f.text_field :time_zone, value: @site&.time_zone.presence || "Europe/London", required: true %>
+<%= f.submit "Create site", class: "button solid" %><% end %></div>
