@@ -1,9 +1,20 @@
 <% content_for :title, "Integrations" %><div class="hero"><div><p class="eyebrow"><%= current_site.name %></p><h1>Integrations</h1><p>Inspect the connections, reports and evidence available to this site.</p></div></div>
+<p><%= link_to "Browse imported evidence", source_snapshots_path %></p>
 <p class="notice" role="status"><strong><%= @automation_online ? "Background jobs are running." : "Background jobs have not checked in recently." %></strong>
-  <% if current_site.tracking_mode == "manual" %>Your rankings update when you import a reading.<% else %>Scheduled rank checks run while the application host is awake.<% end %>
+  <% if current_site.tracking_mode == "manual" %>Local organic ranks update when you import a reading. Connected reporting sources refresh on their schedules while the host is running.<% else %>Scheduled rank checks run while the application host is awake.<% end %>
 </p>
 <%= form_with url: integrations_path, method: :get, class: "filter" do |f| %><label>Find a service <%= search_field_tag :q, params[:q], placeholder: "Name or feature" %></label><label>Show <%= select_tag :filter, options_for_select([["All integrations",""],["Needs attention","attention"]],params[:filter]) %></label><%= f.submit "Filter", class: "button" %><span><%= @entries.size %> of <%= IntegrationCatalogue::ROWS.size %> services</span><% end %>
 <% if @entries.empty? %><p class="empty">No matching integrations. <%= link_to "Clear filters", integrations_path %></p><% end %>
-<div class="grid"><% @entries.each do |entry| %><% state=integration_state(entry) %>
-<%= link_to integration_path(entry.key), class: "card service" do %><span class="eyebrow"><%= entry.group %></span><h2><%= entry.name %></h2><span class="badge <%= "attention" if state[:attention] %>"><%= state[:label] %></span><p><%= entry.mode %></p><small><%= state[:detail] %></small><% end %>
-<% end %></div>
+<div class="grid">
+  <% @entries.each do |entry| %>
+    <% state = integration_state(entry) %>
+    <article class="card">
+      <%= link_to integration_path(entry.key), class: "service" do %>
+        <span class="eyebrow"><%= entry.group %></span><h2><%= entry.name %></h2>
+        <span class="badge <%= "attention" if state[:attention] %>"><%= state[:label] %></span>
+        <p><%= state[:mode] || entry.mode %></p><small><%= state[:detail] %></small>
+      <% end %>
+      <%= render "imported_reports", state: state %>
+    </article>
+  <% end %>
+</div>

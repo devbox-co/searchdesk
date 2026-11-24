@@ -1,0 +1,40 @@
+<div class="toolbar">
+  <%= form_with url: rankings_path, method: :get, class: "date-filter" do |f| %>
+    <%= hidden_field_tag :source, "gsc" %>
+    <%= f.label :day, "Pacific report date" %><%= f.date_field :day, value: @day, max: @today, required: true %>
+    <%= f.submit "Show", class: "button" %><%= link_to "Latest available", rankings_path(source: "gsc") %>
+  <% end %>
+</div>
+<% if @positions.country.blank? %>
+  <div class="empty"><h2>Choose a reporting country</h2><p>A country keeps the daily comparisons consistent.</p><%= link_to "Search Console settings", search_console_path %></div>
+<% elsif !@positions.available? && @positions.cutoff.blank? %>
+  <div class="empty"><h2>Waiting for Search Console evidence</h2><p>Connect a verified property or import dated daily reports for these exact phrases and the selected country.</p><%= link_to "Search Console settings", search_console_path %></div>
+<% else %>
+  <p class="notice"><strong>Available through <%= compact_date(@positions.cutoff) || "an unknown day" %> Pacific.</strong>
+    <% if @positions.cutoff && @positions.cutoff < @today %>Later days are awaiting a final report in this workspace.<% end %>
+    Google reports the average position of the property's highest result across eligible impressions in this country.
+    <%= @positions.property %> · <%= @positions.country %> · all devices and pages.</p>
+  <% if @positions.rows.empty? %>
+    <div class="empty"><h2>No tracked keywords</h2><p>Add the customer searches that you want to follow.</p></div>
+  <% else %>
+    <div class="tablewrap" tabindex="0" role="region" aria-label="Search Console daily positions"><table>
+      <thead><tr><th scope="col">Keyword</th><th scope="col">First reported</th><th scope="col"><%= compact_date(@day) %></th><th scope="col">Change</th></tr></thead>
+      <tbody>
+      <% @positions.rows.each do |row| %>
+        <% first, current = row.values_at(:baseline, :current) %>
+        <tr><td><%= link_to row[:keyword].phrase, source_snapshots_path(provider: "gsc", keyword: row[:keyword].phrase) %></td>
+          <td><% if first %><%= number_with_precision(first[:position], precision: 2, strip_insignificant_zeros: true) %><small><%= compact_date(first[:date]) %></small><% else %>No baseline<% end %></td>
+          <td><% if current&.dig(:position) %><strong><%= number_with_precision(current[:position], precision: 2, strip_insignificant_zeros: true) %></strong><small><%= pluralize(current[:impressions], "impression") %> · <%= current[:clicks].nil? ? "Clicks unavailable" : pluralize(current[:clicks], "click") %></small>
+              <% elsif current && current[:impressions] == 0 %>No impressions
+              <% elsif @positions.cutoff && @day > @positions.cutoff %>Pending report
+              <% else %>No reported position<% end %>
+            <% if !current&.dig(:position) && row[:latest] %><small>Last observed <%= compact_date(row[:latest][:date]) %></small><% end %>
+          </td><td><%= gsc_position_change(row) %></td></tr>
+      <% end %>
+      </tbody></table></div>
+    <p class="hint">Google can omit low-volume queries. A missing row has no reported position. The first reported value uses the earliest comparable day with impressions on or before the selected date.</p>
+    <% if @positions.records.any? { |record| record.metrics["source_basis"] == "complete_ui_report" } %>
+      <p class="hint">Imported Search Console reports identify exact queries and complete reporting dates. Their exports did not expose the API aggregation or final-data settings. New API readings request final, property-level data.</p>
+    <% end %>
+  <% end %>
+<% end %>

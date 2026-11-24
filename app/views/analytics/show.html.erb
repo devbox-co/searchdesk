@@ -1,0 +1,39 @@
+<% content_for :title, "Google Analytics 4" %>
+<div class="form-page">
+<%= link_to "← Integrations", integrations_path, class: "back" %>
+<h1>Google Analytics 4</h1>
+<p>Compare visits from Google organic search in two consecutive 28-day periods for <strong><%= current_site.host %></strong>.</p>
+<section class="panel"><h2>Connection</h2>
+<p><strong><%= @connection&.status&.humanize || "Not connected" %></strong><% if @connection&.property_id %> · <%= @connection.property_name %> · property <%= @connection.property_id %><% end %></p>
+<% if @connection&.last_error.present? %><p role="status"><%= @connection.last_error %></p><% end %>
+<% unless @configured %><p>Google sign-in is unavailable until the administrator configures the OAuth client.</p><% end %>
+<% if workspace_owner? && @configured %>
+  <p>Grant read-only Analytics access, then enter your GA4 property ID. Searchdesk verifies a web stream for this website before collecting totals.</p>
+  <%= button_to @connection ? "Reconnect Google Analytics" : "Connect Google Analytics", authorize_analytics_path, data: {turbo: false}, class: "button solid" %>
+  <% if @connection && @connection.status != "reconnect" %>
+    <%= form_with url: analytics_path, method: :patch, class: "stack" do |f| %>
+      <%= f.label :property, "GA4 property ID" %><%= f.text_field :property, value: @connection.property_id, required: true, inputmode: "numeric", pattern: "[1-9][0-9]{0,19}", maxlength: 20, aria: {describedby: "property-help"} %>
+      <small id="property-help">In Google Analytics open Admin → Property details and copy the numeric Property ID.</small><%= f.submit "Verify and use this property", class: "button" %>
+    <% end %>
+    <% if @connection.property_id %><%= button_to "Refresh Analytics report", sync_analytics_path, class: "button" %><% end %>
+  <% end %>
+<% end %>
+<% if workspace_owner? && @connection %>
+  <p>Disconnecting removes this site's saved Analytics credentials. Imported snapshots stay in Evidence.</p>
+  <%= button_to "Disconnect Analytics", analytics_path, method: :delete, class: "text-button", form: {data: {turbo_confirm: "Disconnect Analytics for this site?"}} %>
+<% end %>
+</section>
+<% if @connection&.property_id %>
+<section class="panel"><h2>Google organic traffic</h2>
+<p>Verified web streams for <%= @connection.verified_host %> and its www alias. Google supplies aggregate sessions, engaged sessions and key events for traffic tagged google / organic. Key events need validation before reporting enquiries.</p>
+<% if @connection.report.present? %>
+  <p>Last synced <%= @connection.synced_at.in_time_zone(current_site.time_zone).strftime("%d %b %Y, %H:%M %Z") %>. Reporting dates use <%= @connection.property_zone %> and allow three days for processing.</p>
+  <% %w[current previous].each do |label| %><% period = @connection.report.fetch(label); metrics = period["metrics"] %>
+    <h3><%= label.humanize %> 28 days</h3><p><%= period.fetch("start") %> – <%= period.fetch("end") %></p>
+    <% if metrics %><dl class="facts"><dt>Sessions</dt><dd><%= number_with_delimiter(metrics.fetch("sessions")) %></dd><dt>Engaged sessions</dt><dd><%= number_with_delimiter(metrics.fetch("engaged_sessions")) %></dd><dt>Key events · unverified</dt><dd><%= number_with_precision(metrics.fetch("unverified_key_events"), precision: 2, strip_insignificant_zeros: true) %></dd></dl>
+    <% else %><p>Google returned no matching rows for this period.</p><% end %>
+    <% if period.values_at("subject_to_thresholding", "sampled", "data_loss_from_other_row").any? %><p>Google marked this report as subject to thresholding, sampling or aggregation limits. See the dated evidence for the reported flags.</p><% end %>
+  <% end %>
+  <%= link_to "View dated evidence", source_snapshots_path %>
+<% else %><p>Waiting for the first successful import.</p><% end %>
+</section><% end %></div>

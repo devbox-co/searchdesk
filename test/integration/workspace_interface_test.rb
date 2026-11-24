@@ -13,7 +13,7 @@ class WorkspaceInterfaceTest < ActionDispatch::IntegrationTest
     assert_select "#public-catalogue li", count: 16
     get public_catalogue_path, params: { q: "LOCALFALCON" }
     assert_select "article h2", text: "Local Falcon", count: 1
-    assert_select "article .badge", text: "Report link"
+    assert_select "article .badge", text: "Read existing reports"
     get integrations_path
     assert_redirected_to login_path
   end

@@ -1,6 +1,16 @@
 <% content_for :title, "Google Search Console" %>
 <header class="page-heading"><div><h1>Google Search Console</h1><p>See final Google Web clicks, impressions and average position for your property. Daily local keyword positions appear on the Rankings screen.</p></div></header>
 <section class="panel">
+  <h2>Daily position reporting country</h2>
+  <p>Search Console uses national Web search impressions across all devices. Current country · <%= current_site.rank_country_code.presence || "Not set" %>.</p>
+  <% if workspace_owner? && current_site.tracking_mode != "dataforseo" %>
+    <%= form_with url: market_search_console_path, method: :patch, class: "filter" do |f| %>
+      <label>Two-letter country code <%= f.text_field :country, value: current_site.rank_country_code, maxlength: 2, required: true %></label>
+      <%= f.submit "Save reporting country", class: "button" %>
+    <% end %>
+  <% end %>
+</section>
+<section class="panel">
   <h2>Connection</h2>
   <p><strong><%= @connection&.status&.humanize || "Not connected" %></strong> · <%= current_site.host %></p>
   <% unless @configured %><p>Google sign-in is unavailable until the app administrator configures the OAuth client.</p><% end %>

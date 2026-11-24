@@ -46,17 +46,67 @@ class IntegrationsController < ApplicationController
     SiteReportLink.find_or_initialize_by(site_id: current_site.id, provider: "local-falcon")
   end
 
+  IMPORT_KEYS = {"google-search-console" => "gsc", "google-analytics" => "ga4", "semrush" => "semrush"}.freeze
+
   def integration_state(entry)
+    @integration_states ||= {}
+    @integration_states[entry.key] ||= begin
+      state = connection_state(entry)
+      provider = IMPORT_KEYS[entry.key]
+      if provider
+        count, date = imported_totals.fetch(provider, [0, nil])
+        state.merge(import_count: count, import_date: date, import_provider: provider)
+      else
+        state
+      end
+    end
+  end
+
+  def imported_totals
+    @imported_totals ||= SourceSnapshot.visible_for(current_site).catalogue_imports.group(:provider)
+      .pluck(:provider, Arel.sql("COUNT(*)"), Arel.sql("MAX(observed_on)"))
+      .to_h { |provider, count, day| [provider, [count, day]] }
+  end
+
+  def business_profile_state
+    connector = current_site.local_falcon_connection
+    portal = { label: "Provider portal", mode: "Native provider portal", detail: "Open the Business Profile manager", attention: false }
+    return portal unless connector&.status == "connected" && connector.refresh_token.present? &&
+      connector.synced_at && connector.synced_at > 29.days.ago && connector.place_id.present? && connector.verified_name.present?
+    report = SourceSnapshot.visible_for(current_site).linked_gbp_cache.first
+    return portal unless report && report.metrics["place_id"] == connector.place_id
+    first = Date.iso8601(report.metrics.fetch("start"))
+    last = Date.iso8601(report.metrics.fetch("end"))
+    # The successful sync receipt records whether the linked grant returned GBP on its last read.
+    return portal unless first == last - 27 && connector.result["gbp"] == "Business Profile metrics through #{last}"
+    { label: "Connected via Local Falcon", mode: "Linked account reporting",
+      detail: "Reported period · #{first.strftime('%d %b %Y')} to #{last.strftime('%d %b %Y')}", report: report, attention: false }
+  rescue Date::Error, KeyError, TypeError
+    portal
+  end
+
+  def connection_state(entry)
     case entry.key
-    when "google-search-console"
-      @search_console_connection ||= current_site.search_console_connection
-      state = @search_console_connection&.status
-      synced_at = @search_console_connection&.synced_at
+    when "google-business-profile"
+      business_profile_state
+    when "semrush"
+      { label: imported_totals.key?("semrush") ? "Imported reports" : "No imported reports",
+        mode: "File import", detail: "Automatic API sync unavailable", attention: false }
+    when "google-search-console", "google-analytics"
+      connection = entry.key == "google-analytics" ? current_site.analytics_connection : current_site.search_console_connection
+      state = connection&.status
+      state = nil if connection && connection.refresh_token.blank? && state != "reconnect"
+      synced_at = connection&.synced_at
       detail = synced_at ? "Last successful sync #{synced_at.in_time_zone(current_site.time_zone).strftime('%d %b %Y, %H:%M %Z')}" : "No successful sync recorded"
       { label: { "connected" => "Connected", "choose_property" => "Choose property", "delayed" => "Sync delayed", "reconnect" => "Reconnect", "error" => "Needs attention" }.fetch(state, "Not connected"), detail: detail, attention: state != "connected" || synced_at.nil? || synced_at < 2.days.ago }
     when "local-falcon"
       @stored_link ||= local_report_link
-      { label: @stored_link.persisted? ? "Link saved" : "Add report link", detail: "View at provider · no automatic sync", attention: false }
+      connector = current_site.local_falcon_connection
+      if connector&.refresh_token.present?
+        label = { "delayed" => "Sync delayed", "reconnect" => "Reconnect" }.fetch(connector.status, connector.synced_at ? "Connected" : "Verifying location")
+        return { label: label, detail: connector.last_error || (connector.synced_at && "Last refreshed #{connector.synced_at.to_date}") || "First refresh queued", attention: connector.status != "connected" }
+      end
+      { label: @stored_link.persisted? ? "Link saved" : "Available", detail: "Connect to refresh existing reports or save a report link", attention: false }
     when "dataforseo"
       selected = current_site.tracking_mode == "dataforseo"
       return { label: "Not selected", detail: "Use a managed site to schedule observations", attention: false } unless selected

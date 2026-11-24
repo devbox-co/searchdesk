@@ -8,6 +8,12 @@ default: &default
   search_console_daily:
     class: SearchConsoleSyncJob
     schedule: every 15 minutes
+  analytics_daily:
+    class: AnalyticsSyncJob
+    schedule: every 15 minutes
+  local_falcon_daily:
+    class: LocalFalconSyncJob
+    schedule: every 15 minutes
   tracking_slot_dispatch:
     class: TrackingScheduleJob
     schedule: every 5 minutes

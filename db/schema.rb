@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_24_005001) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_24_008000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -24,6 +24,41 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_005001) do
     t.jsonb "input_snapshot", default: {}, null: false
     t.index ["keyword_action_id", "skill_version", "input_digest"], name: "unique_action_draft_input", unique: true
     t.index ["keyword_action_id"], name: "index_action_drafts_on_keyword_action_id"
+  end
+
+  create_table "analytics_connections", force: :cascade do |t|
+    t.bigint "site_id", null: false
+    t.text "access_token"
+    t.text "refresh_token"
+    t.datetime "token_expires_at"
+    t.string "grant_key", null: false
+    t.string "status", default: "choose_property", null: false
+    t.string "property_id"
+    t.string "property_name"
+    t.string "property_zone"
+    t.string "verified_host"
+    t.jsonb "stream_ids", default: [], null: false
+    t.string "sync_key"
+    t.datetime "sync_started_at"
+    t.datetime "synced_at"
+    t.string "last_error"
+    t.jsonb "report", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["site_id"], name: "index_analytics_connections_on_site_id", unique: true
+  end
+
+  create_table "analytics_grants", force: :cascade do |t|
+    t.bigint "site_id", null: false
+    t.bigint "user_id", null: false
+    t.string "state_digest", null: false
+    t.text "verifier", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["site_id"], name: "index_analytics_grants_on_site_id"
+    t.index ["state_digest"], name: "index_analytics_grants_on_state_digest", unique: true
+    t.index ["user_id"], name: "index_analytics_grants_on_user_id"
   end
 
   create_table "daily_slots", force: :cascade do |t|
@@ -81,6 +116,30 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_005001) do
     t.index ["site_id"], name: "index_keywords_on_site_id"
   end
 
+  create_table "local_falcon_connections", force: :cascade do |t|
+    t.bigint "site_id", null: false
+    t.string "client_id"
+    t.string "callback_url"
+    t.string "place_id"
+    t.string "verified_name"
+    t.string "status"
+    t.string "state_digest"
+    t.string "sync_key"
+    t.bigint "initiator_id"
+    t.text "verifier"
+    t.text "access_token"
+    t.text "refresh_token"
+    t.text "last_error"
+    t.datetime "state_expires_at"
+    t.datetime "token_expires_at"
+    t.datetime "synced_at"
+    t.datetime "last_attempt_at"
+    t.jsonb "result", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["site_id"], name: "index_local_falcon_connections_on_site_id", unique: true
+  end
+
   create_table "login_sessions", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.datetime "expires_at", null: false
@@ -98,7 +157,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_005001) do
     t.index ["user_id"], name: "index_memberships_on_user_id"
     t.index ["workspace_id", "user_id"], name: "index_memberships_on_workspace_id_and_user_id", unique: true
     t.index ["workspace_id"], name: "index_memberships_on_workspace_id"
-    t.check_constraint "role::text = ANY (ARRAY['owner'::character varying, 'manager'::character varying, 'viewer'::character varying]::text[])", name: "membership_role_valid"
+    t.check_constraint "role::text = ANY (ARRAY['owner'::character varying::text, 'manager'::character varying::text, 'viewer'::character varying::text])", name: "membership_role_valid"
+  end
+
+  create_table "project_tasks", force: :cascade do |t|
+    t.bigint "site_id", null: false
+    t.string "external_id", null: false
+    t.string "title", null: false
+    t.string "status", null: false
+    t.string "priority", null: false
+    t.text "summary"
+    t.text "source_path"
+    t.string "working_status"
+    t.text "owner_note"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["site_id", "external_id"], name: "index_project_tasks_on_site_id_and_external_id", unique: true
+    t.index ["site_id"], name: "index_project_tasks_on_site_id"
   end
 
   create_table "rank_observations", force: :cascade do |t|
@@ -186,7 +261,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_005001) do
     t.string "rank_location_name"
     t.index ["workspace_id", "host"], name: "index_sites_on_workspace_id_and_host", unique: true
     t.index ["workspace_id"], name: "index_sites_on_workspace_id"
-    t.check_constraint "tracking_mode::text = ANY (ARRAY['manual'::character varying, 'demo'::character varying, 'dataforseo'::character varying]::text[])", name: "site_tracking_mode_valid"
+    t.check_constraint "tracking_mode::text = ANY (ARRAY['manual'::character varying::text, 'demo'::character varying::text, 'dataforseo'::character varying::text])", name: "site_tracking_mode_valid"
   end
 
   create_table "solid_queue_batch_executions", force: :cascade do |t|
@@ -339,6 +414,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_005001) do
     t.index ["key"], name: "index_solid_queue_semaphores_on_key", unique: true
   end
 
+  create_table "source_snapshots", force: :cascade do |t|
+    t.bigint "site_id", null: false
+    t.string "provider", null: false
+    t.string "external_id", null: false
+    t.string "title", null: false
+    t.date "observed_on", null: false
+    t.text "scope", null: false
+    t.jsonb "metrics", default: {}, null: false
+    t.text "source_url"
+    t.text "source_path"
+    t.string "keyword"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["site_id", "observed_on"], name: "index_source_snapshots_on_site_id_and_observed_on"
+    t.index ["site_id", "provider", "external_id"], name: "index_source_snapshots_on_site_id_and_provider_and_external_id", unique: true
+    t.index ["site_id"], name: "index_source_snapshots_on_site_id"
+  end
+
   create_table "tracking_series", force: :cascade do |t|
     t.bigint "keyword_id", null: false
     t.string "device", null: false
@@ -396,13 +489,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_005001) do
   end
 
   add_foreign_key "action_drafts", "keyword_actions", on_delete: :cascade
+  add_foreign_key "analytics_connections", "sites", on_delete: :cascade
+  add_foreign_key "analytics_grants", "sites", on_delete: :cascade
+  add_foreign_key "analytics_grants", "users", on_delete: :cascade
   add_foreign_key "daily_slots", "tracking_series"
   add_foreign_key "keyword_actions", "tracking_series"
   add_foreign_key "keyword_page_assignments", "keywords"
   add_foreign_key "keywords", "sites"
+  add_foreign_key "local_falcon_connections", "sites", on_delete: :cascade
   add_foreign_key "login_sessions", "users"
   add_foreign_key "memberships", "users"
   add_foreign_key "memberships", "workspaces"
+  add_foreign_key "project_tasks", "sites", on_delete: :cascade
   add_foreign_key "rank_observations", "daily_slots"
   add_foreign_key "search_console_connections", "sites"
   add_foreign_key "search_console_grants", "sites", on_delete: :cascade
@@ -418,6 +516,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_005001) do
   add_foreign_key "solid_queue_ready_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_recurring_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_scheduled_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
+  add_foreign_key "source_snapshots", "sites", on_delete: :cascade
   add_foreign_key "tracking_series", "keywords"
   add_foreign_key "tracking_series", "rank_observations", column: "baseline_observation_id", on_delete: :nullify
   add_foreign_key "wording_runs", "wording_settings", on_delete: :cascade

@@ -2,8 +2,12 @@ require "uri"
 
 class Site < ApplicationRecord
   belongs_to :workspace
+  has_many :source_snapshots, dependent: :delete_all
+  has_many :project_tasks, dependent: :delete_all
   has_many :keywords, dependent: :destroy
   has_one :search_console_connection, dependent: :destroy
+  has_one :local_falcon_connection, dependent: :destroy
+  has_one :analytics_connection, dependent: :destroy
   has_many :site_report_links, dependent: :destroy
 
   TRACKING_MODES = %w[manual demo dataforseo].freeze

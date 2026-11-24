@@ -14,8 +14,13 @@ class OnboardingController < ApplicationController
       end
     end
     @site = current_workspace.sites.build(attributes)
+    @rank_country_code = params.dig(:site, :rank_country_code).to_s.strip.upcase
+    if @rank_country_code.present? && !SearchConsole::DailyPositions::COUNTRIES.key?(@rank_country_code)
+      @site.errors.add(:rank_country_code, "must be a two-letter ISO country code")
+      return render :new, status: :unprocessable_entity
+    end
+    @site.rank_country_code = @rank_country_code.presence
     if @site.tracking_mode == "dataforseo"
-      @rank_country_code = params.dig(:site, :rank_country_code).to_s.strip.upcase
       unless Tracking::DataForSeo.enabled?
         @site.errors.add(:base, "Managed tracking is not configured. Choose manual imports or ask your administrator to connect the rank provider.")
         return render :new, status: :unprocessable_entity

@@ -1,0 +1,14 @@
+<% content_for :title, "Import project records" %>
+<div class="form-page"><p class="eyebrow"><%= current_site.name %></p><h1>Import project records</h1>
+  <p>Choose a JSON file containing dated evidence or project tasks for this site. The same external IDs update existing records.</p>
+  <% if @error %><p class="errors" role="alert"><%= @error %></p><% end %>
+  <%= form_with scope: :project_import, url: project_imports_path, multipart: true, class: "stack" do |f| %>
+    <%= f.label :file, "JSON file (up to 8 MiB)" %><%= f.file_field :file, accept: ".json,application/json", required: true %>
+    <%= f.submit "Import records", class: "button solid" %>
+  <% end %>
+  <details class="guide"><summary>File format</summary>
+    <p>Include either or both arrays. Give every row a stable external ID. Dates use YYYY-MM-DD. Add an optional keyword to attach an evidence record to a phrase.</p>
+    <pre><%= JSON.pretty_generate(evidence: [{provider: "gsc", external_id: "report-1", title: "Monthly clicks", observed_on: Date.current.iso8601, scope: "Web search, selected property and month", metrics: {clicks: 12}}], tasks: [{external_id: "task-1", title: "Review the service page", status: "proposed", priority: "medium"}]) %></pre>
+  </details>
+  <div class="buttons"><%= link_to "Source evidence", source_snapshots_path %><%= link_to "Project tasks", project_tasks_path %></div>
+</div>

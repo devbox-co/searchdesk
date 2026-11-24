@@ -1,10 +1,33 @@
-<% content_for :title, "Actions" %><div class="hero"><div><p class="eyebrow"><%= current_site.name %></p><h1>Keyword actions</h1><p>Review suggested changes alongside the observations that triggered them.</p></div></div>
+<% content_for :title, "Actions" %>
+<div class="hero"><div><p class="eyebrow"><%= current_site.name %></p><h1>Actions</h1></div></div>
+<% if @task_counts.present? %>
+  <section class="project-actions" aria-labelledby="project-work-heading">
+    <h2 id="project-work-heading">Project tasks</h2>
+    <p><strong><%= @task_counts.slice(*ProjectTask::ACTIONABLE_STATES).values.sum %> actionable</strong> of <%= link_to pluralize(@task_counts.values.sum, "project task"), project_tasks_path %>. <%= link_to "Jump to keyword recommendations", "#keyword-recommendations" %></p>
+    <ul class="task-statuses" aria-label="Project tasks by current status">
+      <% @task_counts.sort.each do |status, count| %>
+        <li><%= link_to "#{status.humanize} · #{count}", project_tasks_path(status: status) %></li>
+      <% end %>
+    </ul>
+    <% if @priority_tasks.any? %>
+      <h3>Priority tasks</h3>
+      <ul class="priority-tasks"><% @priority_tasks.each do |task| %>
+        <li class="card"><%= link_to task.title, project_task_path(task) %>
+          <small><%= task.priority.humanize %> priority · <%= task.effective_status.humanize %></small>
+        </li>
+      <% end %></ul>
+    <% end %>
+  </section>
+<% else %>
+  <p><%= link_to "Open project tasks", project_tasks_path %></p>
+<% end %>
+<h2 id="keyword-recommendations">Keyword recommendations</h2>
 <% if workspace_owner? %><p><%= link_to "Business wording preferences", wording_setting_path %></p><% end %>
 <%= form_with url: actions_path, method: :get, class: "filter" do |f| %>
 <label>Keyword <%= select_tag :keyword_id, options_for_select([["All keywords",""]]+@keywords.map { |k| [k.phrase,k.id] }, @keyword&.id) %></label>
 <label>Status <%= select_tag :state, options_for_select([["Open","open"],["Reviewed","resolved"]], @state) %></label><%= f.submit "Filter", class: "button" %>
 <% end %>
-<% if @actions.empty? %><div class="empty"><h2>No <%= @state == "open" ? "open" : "reviewed" %> actions in this view</h2><p>Recommendations appear when comparable readings and evidence meet a rule's requirements.</p></div><% end %>
+<% if @actions.empty? %><div class="empty"><h3>No <%= @state == "open" ? "open" : "reviewed" %> keyword recommendations in this view</h3><p>Recommendations appear when comparable readings and evidence meet a rule's requirements.</p></div><% end %>
 <% @actions.each do |item| %><article class="card action">
   <p class="eyebrow"><%= link_to item.keyword.phrase, keyword_path(item.keyword, device: item.tracking_series.device) %> · <%= item.tracking_series.device.capitalize %> · <%= compact_date(item.observed_on) %></p>
   <h2><%= item.title %></h2><p><%= item.description %></p>

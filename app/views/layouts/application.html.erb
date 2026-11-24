@@ -31,7 +31,7 @@
   <main id="main" class="shell">
     <% if current_user && current_site %>
       <nav class="primary-nav" aria-label="Workspace">
-        <% [["Rankings", rankings_path, %w[dashboard keywords rank_imports]], ["Actions", actions_path, %w[keyword_actions action_drafts]], ["Integrations", integrations_path, %w[integrations search_console]]].each do |label, path, controllers| %>
+        <% [["Rankings", rankings_path, %w[dashboard keywords rank_imports]], ["Actions", actions_path, %w[keyword_actions action_drafts project_tasks]], ["Integrations", integrations_path, %w[integrations search_console source_snapshots project_imports]]].each do |label, path, controllers| %>
           <%= link_to label, path, aria: {current: controllers.include?(controller_name) ? "page" : nil} %>
         <% end %>
       </nav>

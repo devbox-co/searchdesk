@@ -598,3 +598,51 @@ td .mobile-movement, td .mobile-page { display: none; }
   [aria-label="Keyword rankings"] :is(th,td):nth-child(n+4) { display: none; }
   [aria-label="Keyword rankings"] td small { white-space: normal; }
 }
+
+.source-reference { overflow-wrap: anywhere; }
+
+.source-picker { width: fit-content; margin: 10px 0; }
+@media (max-width: 480px) {
+  [aria-label="Search Console daily positions"] table { min-width: 0; table-layout: fixed; }
+  [aria-label="Search Console daily positions"] :is(th,td) { overflow-wrap: anywhere; }
+  [aria-label="Search Console daily positions"] td small { white-space: normal; }
+  [aria-label="Search Console daily positions"] :is(th,td):first-child { width: 32%; }
+}
+
+.project-actions {
+  margin-bottom: 2rem;
+}
+.task-statuses, .priority-tasks {
+  list-style: none;
+  padding: 0;
+}
+.task-statuses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.75rem;
+}
+.task-statuses a {
+  display: inline-block;
+  padding: 0.2rem 0;
+}
+.priority-tasks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: 0.65rem;
+}
+.priority-tasks .card {
+  padding: 0.8rem 1rem;
+  overflow-wrap: anywhere;
+}
+.priority-tasks small {
+  display: block;
+  margin-top: 0.4rem;
+}
+
+.source-picker { max-width: 100%; flex-wrap: wrap; }
+[aria-label="Semrush campaign positions"] td small { white-space: normal; }
+@media (max-width: 680px) {
+  [aria-label="Semrush campaign positions"] table { min-width: 0; table-layout: fixed; }
+  [aria-label="Semrush campaign positions"] :is(th,td) { padding: 8px 5px; overflow-wrap: anywhere; }
+  [aria-label="Semrush campaign positions"] :is(th,td):first-child { width: 33%; }
+}

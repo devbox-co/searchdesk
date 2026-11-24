@@ -25,6 +25,15 @@ module WorkspaceHelper
     end
   end
 
+  def gsc_position_change(row)
+    delta = row[:change]
+    return "Starting point" if row.dig(:current, :position) && row.dig(:baseline, :date) == row.dig(:current, :date)
+    return "—" if delta.nil?
+    return "No change" if delta.round(2).zero?
+
+    "#{delta.positive? ? 'Up' : 'Down'} #{number_with_precision(delta.abs, precision: 2, strip_insignificant_zeros: true)}"
+  end
+
   def compact_date(date)
     date&.strftime("%d %b %Y")
   end

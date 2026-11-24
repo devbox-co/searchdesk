@@ -2,6 +2,7 @@
 <div class="hero"><div><p class="eyebrow">Keyword history</p><h1><%= @keyword.phrase %></h1><p><%= current_site.location %> · Google organic · <%= current_site.language %></p></div>
 <% if current_site.tracking_mode == "manual" && can_manage_site? %><%= link_to "Import observation", new_keyword_rank_import_path(@keyword, device: @device), class: "button solid" %><% end %></div>
 <div class="toolbar"><div class="segments"><% %w[mobile desktop].each do |device| %><%= link_to device.capitalize, keyword_path(@keyword, device: device), aria: {current: device == @device ? "page" : nil} %><% end %></div><%= link_to "View keyword actions", actions_path(keyword_id: @keyword.id) %></div>
+<p><%= link_to "Evidence for this keyword", source_snapshots_path(keyword: @keyword.phrase) %></p>
 <p class="notice">Preferred page · <%= @keyword.preferred_url.presence || "Unassigned" %></p>
 <% if can_manage_site? %><details class="guide"><summary>Change preferred page</summary>
 <%= form_with scope: :keyword, url: preferred_page_keyword_path(@keyword), method: :patch do |f| %>

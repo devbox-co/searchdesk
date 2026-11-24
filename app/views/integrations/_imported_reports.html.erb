@@ -1,0 +1,6 @@
+<% if state[:import_count].to_i.positive? %>
+  <p><%= link_to pluralize(state[:import_count], "imported report"), source_snapshots_path(provider: state[:import_provider], origin: "imported") %>
+    <small>Latest record dated <%= compact_date(state[:import_date]) %></small></p>
+<% elsif state[:import_provider] && state[:label] != "No imported reports" %>
+  <small>No imported reports</small>
+<% end %>

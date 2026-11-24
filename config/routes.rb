@@ -20,6 +20,9 @@ Rails.application.routes.draw do
     patch :preferred_page, on: :member
     resources :rank_imports, only: %i[new create]
   end
+  resources :source_snapshots, only: %i[index show]
+  resources :project_tasks, only: %i[index show update]
+  resources :project_imports, only: %i[new create]
   resources :actions, only: %i[index update], controller: "keyword_actions"
   post "actions/:id/draft", to: "action_drafts#create", as: :action_draft
   get "actions/:id/draft", to: "action_drafts#show"
@@ -27,6 +30,17 @@ Rails.application.routes.draw do
   get "catalogue", to: "integrations#catalogue", as: :public_catalogue
   resources :integrations, only: %i[index show update]
   resource :search_console, only: %i[show update destroy], controller: "search_console" do
+    patch :market
+    post :authorize
+    get :callback
+    post :sync
+  end
+  resource :local_falcon_connection, only: %i[show update destroy] do
+    post :authorize
+    get :callback
+    post :sync
+  end
+  resource :analytics, only: %i[show update destroy], controller: "analytics" do
     post :authorize
     get :callback
     post :sync

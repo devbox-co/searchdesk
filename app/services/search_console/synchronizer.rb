@@ -21,9 +21,17 @@ module SearchConsole
           connection.update!(access_token: token, token_expires_at: Time.current + refreshed.fetch("expires_in").to_i.seconds)
         end
       end
-      report = ReportBuilder.new(client: client, token: token, property: property, site: connection.site).call
+      builder = ReportBuilder.new(client: client, token: token, property: property, site: connection.site)
+      report = builder.call
       connection.with_lock do
         return false unless connection.sync_key == key && connection.property == property
+        if builder.position_country != DailyPositions.country_for(connection.site.reload)
+          connection.update!(sync_key: nil)
+          return false
+        end
+        DailyPositions.persist!(site: connection.site, property: property, country: builder.position_country,
+          terms: builder.position_terms.map(&:downcase).uniq, start_day: builder.position_start,
+          end_day: builder.position_end, rows: builder.position_rows)
         history = connection.search_console_reports.find_or_initialize_by(property: property, period_end: report.dig("current", "end"))
         history.update!(report: report)
         connection.search_console_reports.where("period_end < ?", 13.months.ago.to_date).delete_all
@@ -31,7 +39,7 @@ module SearchConsole
                            sync_key: nil, last_error: nil)
       end
       true
-    rescue Client::Error, KeyError, TypeError, ArgumentError => e
+    rescue Client::Error, KeyError, TypeError, ArgumentError, ActiveRecord::RecordInvalid => e
       status = e.is_a?(Client::AccessError) ? "reconnect" : "delayed"
       message = e.is_a?(Client::Error) ? e.message : "Google returned an incomplete report. The last successful report was kept."
       connection.class.where(id: connection.id, sync_key: key).update_all(status: status, last_error: message, sync_key: nil)

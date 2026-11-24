@@ -1,0 +1,29 @@
+<% if @campaign.available? %>
+  <%= form_with url: rankings_path, method: :get, class: "filter" do |f| %>
+    <%= hidden_field_tag :source, "campaign" %>
+    <% if @campaign.campaigns.many? %>
+      <label>Campaign and search settings <%= select_tag :campaign, options_for_select(@campaign.campaigns.map { |c| ["#{c[:location]} · #{c[:device]} · #{c[:language]} · #{c[:id]}", c[:key]] }, @campaign.selected&.fetch(:key)) %></label>
+    <% end %>
+    <label>Campaign observation date <%= f.date_field :day, value: @day, max: @today, required: true %></label>
+    <%= f.submit "Show", class: "button" %>
+    <%= link_to "Latest available", rankings_path(source: "campaign", campaign: @campaign.selected&.fetch(:key)) %>
+  <% end %>
+<% end %>
+<% if (campaign = @campaign.selected) %>
+  <p class="notice"><strong><%= campaign[:location] %></strong> · Google · <%= campaign[:device].capitalize %> · <%= campaign[:language] == "en" ? "English" : campaign[:language] %> · <%= campaign[:host] %>. Campaign positions include eligible search features such as Local Pack and AI Overview. A feature label appears when reported.</p>
+  <p>Campaign <%= campaign[:id] %> · <%= pluralize(@campaign.rows.size, "keyword") %> · latest imported observation <strong><%= compact_date(@campaign.cutoff) %></strong>.</p>
+  <div class="tablewrap" tabindex="0" role="region" aria-label="Semrush campaign positions"><table>
+  <thead><tr><th scope="col">Keyword</th><th scope="col">Starting observation</th><th scope="col"><%= @day == @today ? "Today" : "Selected day" %> · <%= compact_date(@day) %></th><th scope="col">Since start</th></tr></thead>
+  <tbody><% @campaign.rows.each do |row| %>
+    <% first, current, latest = row.values_at(:baseline, :current, :latest) %>
+    <tr><td><strong><%= row[:term] %></strong><% if current&.dig(:page) %><small>Ranking page · <%= link_to ranking_page_label(current[:page]), current[:page], target: "_blank", rel: "noopener noreferrer" %></small><% end %></td>
+      <td><% if first %><%= first[:rank] ? "##{first[:rank]}" : "No position reported" %><small><%= link_to compact_date(first[:date]), source_snapshot_path(first[:record]) %></small><% if first[:feature] %><small class="badge"><%= first[:feature] %></small><% end %><% if row[:first][:date] < first[:date] %><small>No position on <%= link_to compact_date(row[:first][:date]), source_snapshot_path(row[:first][:record]) %></small><% end %><% else %>No baseline yet<% end %></td>
+      <td><% if current %><strong><%= current[:rank] ? "##{current[:rank]}" : "No position reported" %></strong><small><%= link_to compact_date(current[:date]), source_snapshot_path(current[:record]) %></small><% if current[:feature] %><small class="badge"><%= current[:feature] %></small><% end %>
+        <% else %>No observation on this date<% if latest %><small>Last observation <%= link_to compact_date(latest[:date]), source_snapshot_path(latest[:record]) %><%= " · ##{latest[:rank]}" if latest[:rank] %></small><% end %><% end %></td>
+      <td><% if !row[:change].nil? %><%= row[:change].zero? ? "No change" : "#{row[:change].positive? ? 'Up' : 'Down'} #{row[:change].abs}" %>
+        <% elsif current&.dig(:rank) && first && first[:date] == current[:date] %><%= row[:first][:date] < first[:date] ? "First reported position" : "Starting observation" %>
+        <% else %>—<% end %></td>
+    </tr>
+  <% end %></tbody></table></div>
+  <p>Movement starts at the first reported position for each watchlist keyword within the same campaign, domain, location, device, language and search engine. Select a date link to inspect an observation.</p>
+<% else %><div class="empty"><h2>No matching campaign selected</h2><p>Choose a saved campaign or import a dated Semrush Position Tracking report for this domain.</p></div><% end %>

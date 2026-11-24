@@ -1,0 +1,17 @@
+<% content_for :title, @snapshot.title %>
+<div class="form-page"><%= link_to "← Source evidence", source_snapshots_path, class: "back" %>
+  <p class="eyebrow"><%= @snapshot.provider %> · <%= compact_date(@snapshot.observed_on) %></p><h1><%= @snapshot.title %></h1>
+  <h2>Scope</h2><p><%= @snapshot.scope %></p>
+  <% if @snapshot.keyword.present? %><p>Keyword · <%= link_to @snapshot.keyword, source_snapshots_path(keyword: @snapshot.keyword) %></p><% end %>
+  <h2>Reported metrics</h2><p>These values use the source and scope shown above.</p>
+  <% if @snapshot.metrics.empty? %><p>No numerical metrics were provided with this record.</p><% end %>
+  <dl class="facts">
+    <% @snapshot.metrics.each do |label, value| %>
+      <dt><%= label.humanize %></dt>
+      <dd><% if value.is_a?(Hash) || value.is_a?(Array) %><pre><%= JSON.pretty_generate(value) %></pre><% else %><%= value.nil? ? "Not reported" : value.to_s %><% end %></dd>
+    <% end %>
+  </dl>
+  <h2>Source reference</h2><p><%= @snapshot.external_id %></p>
+  <% if @snapshot.source_path.present? %><p class="source-reference"><%= @snapshot.source_path %></p><% end %>
+  <% if @snapshot.source_url.present? %><%= link_to "Open source ↗", @snapshot.source_url, target: "_blank", rel: "noopener noreferrer", class: "button" %><% end %>
+</div>

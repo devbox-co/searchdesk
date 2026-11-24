@@ -55,6 +55,7 @@ class SearchConsoleController < ApplicationController
       connection.update!(access_token: tokens.fetch("access_token"), refresh_token: tokens.fetch("refresh_token"),
         token_expires_at: Time.current + tokens.fetch("expires_in").to_i.seconds, allowed_properties: properties,
         property: nil, status: "choose_property", sync_key: nil, synced_at: nil, data_through: nil, report: {}, last_error: nil)
+      true
     end
     return redirect_to(search_console_path, alert: "This authorisation was cancelled. Start again to connect.") unless accepted
     redirect_to search_console_path, notice: properties.empty? ? "Google did not return a verified root property matching this site." : "Choose the Google property to report on."
@@ -80,6 +81,18 @@ class SearchConsoleController < ApplicationController
     redirect_to search_console_path, notice: "Property confirmed. A scoped report is queued."
   end
 
+  def market
+    if current_site.tracking_mode == "dataforseo"
+      return redirect_to search_console_path, alert: "This managed site uses its verified search location country."
+    end
+    country = params[:country].to_s.strip.upcase
+    unless SearchConsole::DailyPositions::COUNTRIES.key?(country)
+      return redirect_to search_console_path, alert: "Enter a two-letter ISO country code, such as GB or US."
+    end
+    current_site.update!(rank_country_code: country)
+    redirect_to search_console_path, notice: "Search Console reporting country saved."
+  end
+
   def sync
     connection = current_site.search_console_connection
     if connection&.property.present? && connection.refresh_token.present? && connection.status != "reconnect" && SearchConsole::Client.configured?
@@ -95,6 +108,7 @@ class SearchConsoleController < ApplicationController
     current_site.with_lock do
       SearchConsoleGrant.where(site: current_site).delete_all
       connection&.destroy!
+      SearchConsole::DailyPositions.remove_live!(current_site)
     end
     session.delete(:search_console_flow)
     redirect_to search_console_path, notice: "Search Console was disconnected. Saved tokens and reports for this connection were removed."
