@@ -1,6 +1,7 @@
-<% content_for :title, "Add keyword" %><div class="form-page"><%= link_to "← Rankings", rankings_path, class: "back" %><h1>Add a keyword</h1><p>Track an exact search phrase on mobile and desktop in <%= current_site.location %>.</p>
+<% content_for :title, "Add keyword" %><div class="form-page"><% if params[:setup] == "1" %><%= link_to "← Setup guide", setup_guide_path, class: "back" %><% else %><%= link_to "← Rankings", rankings_path, class: "back" %><% end %><h1>Add a keyword</h1><p>Track an exact search phrase on mobile and desktop in <%= current_site.location %>.</p>
 <%= render "shared/errors", record: @keyword %>
 <%= form_with model: @keyword, url: keywords_path, class: "stack" do |f| %>
+<%= hidden_field_tag :setup, "1" if params[:setup] == "1" %>
 <%= f.label :phrase, "Search phrase" %><%= f.text_field :phrase, required: true, autofocus: true %>
 <%= f.label :preferred_url, "Preferred page URL (optional)" %><%= f.text_field :preferred_url, placeholder: "https://#{current_site.host}/service/" %>
 <%= f.submit "Add to watchlist", class: "button solid" %>

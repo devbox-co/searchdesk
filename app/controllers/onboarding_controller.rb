@@ -1,9 +1,20 @@
 class OnboardingController < ApplicationController
-  skip_before_action :require_site
+  skip_before_action :require_site, only: %i[new create]
   before_action :require_site_manager
 
   def new
     @site = current_workspace.sites.build
+  end
+
+  def show
+    @first_keyword = current_site.keywords.order(:id).first
+  end
+
+  def finish
+    return head :forbidden unless params[:site_id].to_s == current_site.id.to_s
+
+    current_site.update!(setup_tour_pending: false)
+    redirect_to dashboard_path, status: :see_other
   end
 
   def create
@@ -29,12 +40,14 @@ class OnboardingController < ApplicationController
         expected_code: params.dig(:site, :rank_location_code).presence)
       @site.assign_attributes(resolved)
     end
-    Site.transaction do
+    current_workspace.with_lock do
+      @site.setup_tour_pending = @site.tracking_mode != "demo" &&
+        !current_workspace.sites.where.not(tracking_mode: "demo").exists?
       @site.save!
       DemoSiteSetup.call(@site) if @site.tracking_mode == "demo"
     end
     select_current_site(@site)
-    redirect_to dashboard_path, notice: "Your site is ready."
+    redirect_to(@site.setup_tour_pending? ? setup_guide_path : dashboard_path, notice: "Your site is ready.")
   rescue ActiveRecord::RecordInvalid => error
     @site.errors.add(:base, error.record.errors.full_messages.to_sentence) unless error.record == @site
     render :new, status: :unprocessable_entity

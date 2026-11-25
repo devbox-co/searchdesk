@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_25_013000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_25_015000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -354,6 +354,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_013000) do
     t.datetime "rank_location_verified_at"
     t.string "rank_location_name"
     t.boolean "weekly_site_audit_enabled", default: false, null: false
+    t.boolean "setup_tour_pending", default: false, null: false
     t.index ["workspace_id", "host"], name: "index_sites_on_workspace_id_and_host", unique: true
     t.index ["workspace_id"], name: "index_sites_on_workspace_id"
     t.check_constraint "tracking_mode::text = ANY (ARRAY['manual'::character varying::text, 'demo'::character varying::text, 'dataforseo'::character varying::text])", name: "site_tracking_mode_valid"

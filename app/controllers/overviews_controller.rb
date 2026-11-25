@@ -3,6 +3,7 @@ class OverviewsController < ApplicationController
     # Older dashboard bookmarks can include filters for the rankings table.
     ranking_filters = params.permit(:source, :device, :day, :campaign)
     return redirect_to rankings_path(ranking_filters.to_h) if ranking_filters.present?
+    return redirect_to setup_guide_path if can_manage_site? && current_site.setup_tour_pending?
 
     @today = Time.current.in_time_zone(current_site.time_zone).to_date
     @metric = params[:metric] == "impressions" ? "impressions" : "clicks"

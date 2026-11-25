@@ -11,6 +11,8 @@ Rails.application.routes.draw do
   delete "logout", to: "sessions#destroy"
   get "onboarding", to: "onboarding#new"
   post "onboarding", to: "onboarding#create"
+  get "onboarding/setup", to: "onboarding#show", as: :setup_guide
+  patch "onboarding/setup", to: "onboarding#finish"
   post "sites/:id/select", to: "sites#select", as: :select_site
   resource :email_verification, only: %i[new create]
   get "email_verification/:token", to: "email_verifications#show", as: :verify_email

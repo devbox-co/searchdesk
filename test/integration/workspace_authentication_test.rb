@@ -18,16 +18,61 @@ class WorkspaceAuthenticationTest < ActionDispatch::IntegrationTest
     assert_empty user.workspaces.sole.sites
 
     post onboarding_path, params: { site: site_attributes(host: "https://Shop.Example.org/") }
-    assert_redirected_to dashboard_path
+    assert_redirected_to setup_guide_path
     site = user.workspaces.sole.sites.sole
     assert_equal "shop.example.org", site.host
     assert_empty site.keywords
+    assert site.setup_tour_pending?
+    follow_redirect!
+    assert_select "h1", "Set up #{site.name}"
+    assert_select "a[href=?]", new_keyword_path(setup: 1), text: "Add a keyword"
+    assert_select "a[href=?]", new_email_verification_path, text: "Verify email"
 
     delete logout_path
     get dashboard_path
     assert_redirected_to login_path
     post login_path, params: { session: { email: "OWNER@example.org", password: PASSWORD } }
     assert_redirected_to dashboard_path
+    follow_redirect!
+    assert_redirected_to setup_guide_path
+
+    get new_keyword_path(setup: 1)
+    assert_select 'input[name="setup"][value="1"]'
+    assert_difference("site.keywords.count", 1) do
+      post keywords_path, params: { setup: "1", keyword: { phrase: "local lamps" } }
+    end
+    assert_redirected_to setup_guide_path
+    follow_redirect!
+    assert_select "a[href=?]", new_keyword_rank_import_path(site.keywords.sole), text: "Import a ranking"
+    assert_select 'form[action=?] button', setup_guide_path, text: "Finish setup"
+
+    patch setup_guide_path, params: { site_id: site.id }
+    assert_redirected_to dashboard_path
+    refute site.reload.setup_tour_pending?
+    follow_redirect!
+    assert_response :success
+  end
+
+  test "setup guide cannot be finished from a stale site form or by a viewer" do
+    owner = person("setup-owner")
+    other = person("setup-other")
+    site = owner.workspaces.sole.sites.create!(site_attributes.merge(setup_tour_pending: true))
+    other_site = other.workspaces.sole.sites.create!(site_attributes.merge(setup_tour_pending: true))
+    sign_in(owner)
+
+    patch setup_guide_path, params: { site_id: other_site.id }
+    assert_response :forbidden
+    assert site.reload.setup_tour_pending?
+    assert other_site.reload.setup_tour_pending?
+
+    viewer = User.create!(email: "setup-viewer@example.org", password: PASSWORD)
+    site.workspace.memberships.create!(user: viewer, role: "viewer")
+    sign_in(viewer)
+    get setup_guide_path
+    assert_response :forbidden
+    patch setup_guide_path, params: { site_id: site.id }
+    assert_response :forbidden
+    assert site.reload.setup_tour_pending?
   end
 
   test "site selection and workspace mutations require membership in the active workspace" do
@@ -171,7 +216,7 @@ class WorkspaceAuthenticationTest < ActionDispatch::IntegrationTest
     assert_difference("Site.count", 1) do
       post onboarding_path, params: { authenticity_token: token, site: site_attributes }
     end
-    assert_redirected_to dashboard_path
+    assert_redirected_to setup_guide_path
   ensure
     OnboardingController.allow_forgery_protection = original_setting
   end

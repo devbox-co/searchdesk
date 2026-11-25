@@ -1,5 +1,9 @@
 # Local acceptance history
 
+## 25 November 2026 · Guided client setup
+
+The isolated guide build passed Rails eager loading and 193 tests with 2,212 assertions. In Chrome at 1280 and 390 pixels, fictional accounts followed sign-up, site creation, the guide, first keyword entry and Finish setup through to Overview. Email verification and Search Console settings linked back to the guide. The phone workspace menu reopened completed setup and the guide fit within the viewport. Integration tests verified resume on sign-in and rejection of a different site's form and viewer access. The shared working-tree suite reported four ranking-label failures from separate ranking changes.
+
 ## 25 November 2026 · Existing Searchdesk installation
 
 | Check | Observed result |

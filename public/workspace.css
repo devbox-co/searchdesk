@@ -164,6 +164,21 @@ input::placeholder, textarea::placeholder { color: #637086; opacity: 1; }
 .auth { max-width: 465px; }
 .auth > p, .form-page > p { color: var(--muted); }
 .form-page > .panel { padding: 15px 0; border: 0; border-radius: 0; border-top: 1px solid var(--line); }
+.setup-resume { margin-bottom: 16px; }
+.setup-resume a { font-weight: 650; }
+.setup-guide h2, .setup-guide h3 { margin: 0; font-size: 1rem; }
+.setup-guide p { margin: 4px 0 0; }
+.setup-guide .setup-steps { margin: 24px 0; padding-left: 26px; }
+.setup-guide .setup-steps li { padding: 12px 0; }
+.setup-guide .setup-steps li::marker { font-weight: 700; color: var(--accent); }
+.setup-step { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px 16px; }
+.setup-step p, .setup-actions small { color: var(--muted); }
+.setup-step .button { justify-self: start; white-space: normal; }
+.setup-status { color: #20553d; font-size: .875rem; font-weight: 650; }
+.setup-options ul { list-style: none; margin: 8px 0 0; padding: 0; }
+.setup-options li { padding: 12px 0; border-top: 1px solid var(--line); }
+.setup-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-top: 20px; }
+@media (max-width: 540px) { .setup-step { grid-template-columns: 1fr; } }
 .guide { margin: 14px 0; padding: 11px 15px; background: #f7f9fd; }
 .guide summary { font-weight: 650; color: var(--link); }
 .guide[open] > summary { margin-bottom: 10px; }

@@ -42,6 +42,9 @@
   </header>
   <main id="main" tabindex="-1" class="shell">
     <% flash.each do |kind, message| %><p class="flash <%= kind %>" role="status"><%= message %></p><% end %>
+    <% if current_site&.setup_tour_pending? && can_manage_site? && controller_name != "onboarding" %>
+      <aside class="setup-resume" aria-label="Workspace setup"><%= link_to "Resume setup guide", setup_guide_path %></aside>
+    <% end %>
     <%= yield %>
   </main>
 </body>

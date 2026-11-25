@@ -16,6 +16,7 @@ class KeywordsController < ApplicationController
     end
     @slots = scope.limit(101).to_a
     @more = @slots.pop if @slots.size > 100
+    @placements = Tracking::PlacementHistory.for_slots(@slots) if @series.source == "dataforseo"
   rescue Date::Error
     head :bad_request
   end
@@ -48,7 +49,7 @@ class KeywordsController < ApplicationController
     attrs = params.require(:keyword).permit(:phrase, :preferred_url)
     @keyword = current_site.keywords.new(attrs)
     Tracking::Enrollment.call(site: current_site, phrase: attrs[:phrase], preferred_url: attrs[:preferred_url].presence)
-    redirect_to rankings_path, notice: "Keyword added to this site's watchlist."
+    redirect_to(params[:setup] == "1" ? setup_guide_path : rankings_path, notice: "Keyword added to this site's watchlist.")
   rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique, ArgumentError => e
     @keyword.errors.add(:base, e.is_a?(ActiveRecord::RecordNotUnique) ? "This keyword is already on the watchlist." : e.message)
     render :new, status: :unprocessable_entity

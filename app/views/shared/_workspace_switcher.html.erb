@@ -11,6 +11,7 @@
       <% end %>
     <% end %>
     <% if can_manage_site? %><%= link_to "Set up a site", onboarding_path %><% end %>
+    <% if current_site && can_manage_site? %><%= link_to "Setup guide", setup_guide_path %><% end %>
     <% if current_site && workspace_owner? %><%= link_to "Workspace members", workspace_members_path %><% end %>
     <%= button_to "Sign out", logout_path, method: :delete, class: "menu-item" %>
   </div>
