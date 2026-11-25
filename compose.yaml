@@ -5,6 +5,7 @@ x-app: &app
   env_file: .env
   environment:
     RAILS_ENV: production
+    SEARCHDESK_OWNER_CONTROLLED_AI: ${SEARCHDESK_OWNER_CONTROLLED_AI:-true}
     PGHOST: db
     PGUSER: workspace
     PGPASSWORD: ${POSTGRES_PASSWORD:?Use bin/start to initialise local settings}

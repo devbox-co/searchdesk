@@ -1,4 +1,24 @@
-# Local acceptance · 24 November 2026
+# Local acceptance history
+
+## 25 November 2026 · Existing Searchdesk installation
+
+| Check | Observed result |
+| --- | --- |
+| Web and worker | Local `/up` returned HTTP 200. Compose showed healthy web and database containers, a running jobs container and a successful one-off prepare. The application confirmed recent Solid Queue worker, scheduler and dispatcher heartbeats. Ruby 4.0.10, Rails 8.1.4.1, latest applied migration `20261125012000`. |
+| Rails suite | `bin/verify` passed Rails eager loading and 161 tests with 1,828 assertions on the separate test database. Zero failures, errors or skips. |
+| Maps | All four saved SkinHampshire scans from 17, 19, 23 and 24 November had a validated 1000 × 1000 street map in local storage. Navigating from Rankings to Overview loaded the 24 November image. Street map and Pin grid both worked. |
+| Device switching | At 1280- and 390-pixel browser widths, selecting Mobile or Desktop updated the overview chart and rankings without moving the controls. Keyword history used the selected device. Browser Back and Forward restored the overview selection and its scroll position. |
+| OpenAI assistant setup | Rails eager loading and 162 tests with 1,846 assertions passed after the credit error and evidence selection changes. The changes were applied at localhost and `/up` returned HTTP 200. The owner settings preview showed citations from Google Search Console, GA4, Local Falcon Maps, Business Profile and imported Semrush rankings. The synthetic connection test reached OpenAI, which returned `credit_balance_exhausted`. Schedules showed the worker online and daily briefs waiting for API credits. |
+| Latest daily SEO brief on Overview | After the credit grant and successful connection test, SkinHampshire’s first scheduled brief published at 11:45 GMT with three findings. On localhost, Rankings → Overview showed the brief card and its link opened the full report at desktop and 390-pixel widths. Rails eager loading and 163 tests with 1,872 assertions passed, including viewer access, evidence withdrawal and site switching. |
+| Daily SEO brief design | The AI attribution and finding cards were verified on the published SkinHampshire report in Chrome at 1512 and 390 pixels. The dashboard CTA opened the full report by keyboard and the first citation opened Rankings. Rails eager loading and 163 tests with 1,881 assertions passed, including the separate AI and local-evidence labels. |
+
+For a later task, check the running installation's [integrations](http://localhost:3038/integrations) and [schedules](http://localhost:3038/schedules) for current connection, worker and collection status.
+
+## 25 November 2026 · Hosted Compose
+
+`bin/verify` passed Rails eager loading and 192 tests with 2,174 assertions and zero failures, errors or skips. An isolated Compose stack prepared a fresh PostgreSQL database, returned HTTP 200 from `/up` and rendered sign-in through Caddy over locally trusted HTTPS. HTTP redirected to HTTPS. Solid Queue registered its worker and scheduler. The public DNS, certificate and SMTP checks require a hosted instance.
+
+## 24 November 2026 · Initial clean installation
 
 The production-mode Rails service ran on localhost:3038 with an empty customer database. Sign-in and /up returned HTTP 200. PostgreSQL, Puma and Solid Queue ran in separate web, database and job containers. The database stayed on the private Compose network. Docker bound the web port to loopback.
 

@@ -42,8 +42,10 @@ class LocalFalconSyncJob < ApplicationJob
       report[:rows].each do |row|
         snapshot = current.site.source_snapshots.find_or_initialize_by(provider: row[:provider], external_id: row[:external_id])
         # A previous manual import may contain a richer dated source. Leave its provenance intact.
-        next if snapshot.persisted? && snapshot.source_path.present?
-        snapshot.assign_attributes(row)
+        snapshot.assign_attributes(row) unless snapshot.persisted? && snapshot.source_path.present?
+        if (grid = report[:grids][row[:external_id]]) && LocalFalcon::ScanGrid.bound?(grid, snapshot)
+          snapshot.map_grid = grid
+        end
         snapshot.save! if snapshot.new_record? || snapshot.changed?
       end
       current.update!(place_id: report[:place_id], verified_name: report[:verified_name], result: report[:result],

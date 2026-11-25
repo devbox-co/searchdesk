@@ -52,7 +52,7 @@ class SearchConsoleController < ApplicationController
       claim.destroy!
       connection = current_site.search_console_connection || current_site.build_search_console_connection
       # Require explicit re-selection. A new grant must not expose an old grant's report.
-      connection.update!(access_token: tokens.fetch("access_token"), refresh_token: tokens.fetch("refresh_token"),
+      connection.update!(ai_grant_revision: SecureRandom.uuid, access_token: tokens.fetch("access_token"), refresh_token: tokens.fetch("refresh_token"),
         token_expires_at: Time.current + tokens.fetch("expires_in").to_i.seconds, allowed_properties: properties,
         property: nil, status: "choose_property", sync_key: nil, synced_at: nil, data_through: nil, report: {}, last_error: nil)
       true

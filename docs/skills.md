@@ -1,8 +1,21 @@
 # Shipped SEO skills
 
-The Rails application runs two in-house recipes. Each version includes its declared input, output, resource and execution mode under `config/seo_skills/<id>/<version>/`. The fixed Ruby registry validates the recipe and resolves its handler at boot. A site cannot upload instructions, extend the registry or select an arbitrary handler.
+The Rails application chooses the analysis from the selected site's saved evidence. The owner can open the assistant to see findings and choose a follow-up. Searchdesk supplies the analytical prompts on the server.
+
+## Guided review and daily brief
+
+Searchdesk adapts selected instructions from two pinned MIT-licensed projects into its own analytical playbooks.
+
+| Source | How Searchdesk applies it |
+| --- | --- |
+| Garrett Smith / GMB Gorilla, Local SEO Skills, local-reporting v1.2.0 | Report a change in terms a business owner can understand. Compare like measurements and name a useful next check. This applies to weekly search clicks, local ranking changes and geographically comparable Maps readings. [Pinned reporting skill](https://github.com/garrettjsmith/localseoskills/blob/c3b7a25b7d5cc370752d74cfea240ccf992a24db/skills/local-reporting/SKILL.md) · [License notice](Local-SEO-Skills-LICENSE.txt) |
+| Daniel Agrici, Local SEO Brain | Tie statements to dated evidence and identify missing inputs. Describe the observed movement, leave its cause open when the records cannot establish it, and offer a follow-up the owner can choose. [Pinned operating instructions](https://github.com/AI-Marketing-Hub/local-seo-brain/blob/e0dd86f9010085dada9fb6ae128d5a3ef5ff0392/SKILL.md) · [Next-action reference](https://github.com/AI-Marketing-Hub/local-seo-brain/blob/e0dd86f9010085dada9fb6ae128d5a3ef5ff0392/scripts/guide_next_action.py) · [License notice](Local-SEO-Brain-LICENSE.txt) |
+
+The [versioned playbooks](../config/assistant_playbooks/v1.yml) contain the owner questions, evidence sources and instructions for seven reviews. The [selector](../app/services/ai_assistant/playbooks.rb) matches them to the facts available for each request. The daily brief uses the applicable methods together in one budgeted model request. Each optional one-click investigation carries a fixed server-side question. Receipts record the playbook version and the keys used to prepare a model request. Rails calculates the measured values and supplies the links. The installation runs from these bundled instructions and its configured data sources.
 
 ## Keyword action review
+
+The two action recipes declare their inputs, outputs and execution mode under `config/seo_skills/<id>/<version>/`. The fixed Ruby registry validates them and resolves their handlers at boot.
 
 An accepted daily organic observation can trigger a page mismatch, or a decline of at least three positions from baseline on two consecutive observed days. The tracking rule supplies the observation IDs and site-specific evidence. The review recipe chooses an ordered set of checks for that rule. It stores the observed date, keyword, device, location, whitelisted supporting fields, recipe version and SHA-256 input digest with the steps. Repeating the same request returns the same receipt. Additional numerical or page evidence produces a new one. A review older than the previous local day tells the manager to refresh the observation.
 

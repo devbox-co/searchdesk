@@ -1,0 +1,19 @@
+<section class="overview-card" id="rank-distribution" aria-labelledby="rank-distribution-heading">
+  <div class="overview-card-head"><div><h2 id="rank-distribution-heading">Local organic rankings</h2>
+    <p><%= current_site.location.split(",").map(&:strip).join(", ") %> · <%= compact_date(@today) %><% if current_site.tracking_mode == "demo" %> · Demo data<% end %></p></div></div>
+  <nav class="overview-switch" aria-label="Rank chart device">
+    <% %w[mobile desktop].each do |device| %>
+      <%= link_to device.capitalize, overview_filter_path(rank_device: device, anchor: "rank-distribution"),
+        id: "rank-chart-#{device}", data: { turbo_frame: "overview-filters" }, aria: {current: @device == device ? "true" : nil} %>
+    <% end %>
+  </nav>
+  <% if @rank_rows.any? %>
+    <% bands = rank_bands(@rank_rows) %>
+    <ul class="rank-bands" aria-label="Keywords by position on the selected device">
+      <% {three: "Top 3", ten: "4–10", thirty: "11–30", outside: "Outside top 30", unknown: "No complete reading"}.each do |key, label| %>
+        <li><span><%= label %></span><span class="band-track" aria-hidden="true"><i class="band-<%= key %>" style="width:<%= (100.0 * bands[key] / @rank_rows.size).round(2) %>%"></i></span><b><%= bands[key] %></b></li>
+      <% end %>
+    </ul>
+  <% else %><p class="overview-empty">There are no tracked keywords for this device yet.</p><% end %>
+  <%= link_to "View #{@device} rankings", rankings_path(source: "local", device: @device, day: @today), class: "overview-more" %>
+</section>

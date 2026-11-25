@@ -1,5 +1,11 @@
-<nav aria-label="Result pages" class="toolbar">
-  <% if @page > 1 %><%= link_to "← Previous", url_for(request.query_parameters.merge(page: @page - 1)) %><% end %>
-  <% if @page > 1 || @more %><span>Page <%= @page %></span><% end %>
-  <% if @more %><%= link_to "Next →", url_for(request.query_parameters.merge(page: @page + 1)) %><% end %>
-</nav>
+<% if @page > 1 || @more %>
+  <nav aria-label="Result pages" class="toolbar pagination">
+    <% if @page > 1 %>
+      <%= link_to url_for(request.query_parameters.merge(page: @page - 1)), class: "button" do %><%= ui_icon(:arrow_left, size: 16) %> Previous<% end %>
+    <% end %>
+    <span>Page <%= @page %></span>
+    <% if @more %>
+      <%= link_to url_for(request.query_parameters.merge(page: @page + 1)), class: "button" do %>Next <%= ui_icon(:arrow_right, size: 16) %><% end %>
+    <% end %>
+  </nav>
+<% end %>

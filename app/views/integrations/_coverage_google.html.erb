@@ -1,0 +1,11 @@
+<% state = integration_state(key) %>
+<article class="coverage-item" data-coverage="<%= key %>">
+  <h3><%= ui_icon(key == "google-search-console" ? :search : :trend_up, size: 19) %> <%= heading %></h3><p><%= description %></p>
+  <small><%= state[:label] %><% if state[:import_count].positive? %> · <%= pluralize(state[:import_count], "imported report") %> · <%= compact_date(state[:import_date]) %><% end %></small>
+  <% if state[:import_count].positive? && %i[absent choose_property pending reconnect delayed stale error].include?(state[:phase]) %>
+    <div class="coverage-links"><%= link_to "Read saved reports", source_snapshots_path(provider: state[:import_provider], origin: "imported") %>
+      <%= link_to "View connection", destination %></div>
+  <% else %>
+    <%= link_to action, destination %>
+  <% end %>
+</article>

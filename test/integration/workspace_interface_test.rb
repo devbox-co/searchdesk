@@ -8,14 +8,28 @@ class WorkspaceInterfaceTest < ActionDispatch::IntegrationTest
     @site = @workspace.sites.create!(name: "City Plumber", host: "plumber.example", location: "Norwich")
   end
 
-  test "public catalogue reveals all sixteen methods without granting site access" do
+  test "public catalogue reveals all seventeen methods without granting site access" do
     get login_path
-    assert_select "#public-catalogue li", count: 16
+    assert_select "#public-catalogue li", count: 17
     get public_catalogue_path, params: { q: "LOCALFALCON" }
     assert_select "article h2", text: "Local Falcon", count: 1
     assert_select "article .badge", text: "Read existing reports"
     get integrations_path
     assert_redirected_to login_path
+  end
+
+  test "provider setup and settings keep the correct workspace section selected" do
+    login_as(@owner)
+    {search_console_path => integrations_path, analytics_path => integrations_path,
+     local_falcon_connection_path => integrations_path, wording_setting_path => actions_path,
+     project_tasks_path => project_tasks_path, source_snapshots_path => source_snapshots_path}.each do |page, section|
+      get page
+      assert_response :success
+      assert_select "nav.primary-nav a[aria-current=page]", count: 1
+      assert_select "nav.primary-nav a[aria-current=page][href=?]", section
+      assert_select "main#main[tabindex='-1']", count: 1
+      assert_select "main#main nav.primary-nav", count: 0
+    end
   end
 
   test "save replace and remove an allowed report link only for this site" do

@@ -2,6 +2,8 @@ require "test_helper"
 
 class SearchConsolePositionsTest < ActionDispatch::IntegrationTest
   class ClientFixture
+    def sitemaps(token:, property:) = []
+
     attr_reader :calls
     def initialize
       @calls = []
@@ -12,7 +14,7 @@ class SearchConsolePositionsTest < ActionDispatch::IntegrationTest
       @calls << payload
       metrics = { "clicks" => 1, "impressions" => 4, "position" => 6.25, "ctr" => 0.25 }
       case payload[:dimensions]
-      when ["date"] then [{"keys" => ["2026-11-20"]}]
+      when ["date"] then [metrics.merge("keys" => ["2026-11-20"])]
       when ["date", "query"] then [metrics.merge("keys" => ["2026-11-20", "heating"])]
       when ["query", "page", "device"] then [metrics.merge("keys" => ["heating", "https://example.test/heat", "MOBILE"])]
       else [metrics]

@@ -10,13 +10,44 @@ module SearchConsole
       @records = matching_records(site, connection, terms)
       scope = connection&.report&.fetch("daily_scope", {}) || {}
       @cutoff = parse_date(scope["through"]) if scope["country"] == country && scope["property"] == property
-      history = read_reports
+      @history = read_reports
       @day = requested_day || cutoff || @today
-      @rows = terms.map { |term| compare(term, history[term.phrase.downcase]) }
+      @rows = terms.map { |term| compare(term, @history[term.phrase.downcase]) }
     end
 
     def available?
       rows.any? { |row| row[:baseline] }
+    end
+
+    # Count only explicit, final daily API values. An omitted low-volume query
+    # and a reported row with zero clicks are different observations.
+    def weekly_clicks(keywords)
+      phrases = keywords.map { |keyword| keyword.phrase.downcase }.to_set
+      as_of = [day, @today].min
+      checked = {}
+      records.each do |record|
+        next unless record.metrics["source_basis"] == "final_api" && phrases.include?(record.keyword.downcase)
+        dates = Array(record.metrics["queried_days"]).filter_map { |stamp| parse_date(stamp) }
+        checked[record.id] = dates.select { |date| date <= as_of }
+      end
+      finish = checked.values.filter_map(&:max).max
+      return unless finish
+
+      dates = ((finish - 13)..finish).to_a
+      changes = keywords.filter_map do |keyword|
+        daily = @history.fetch(keyword.phrase.downcase, {})
+        clicks = dates.map do |date|
+          reading = daily[date]
+          count = reading[:clicks] if reading && reading[:basis] == "final_api"
+          count if count && count >= 0
+        end
+        next if clicks.any?(&:nil?)
+        previous = clicks.first(7).sum
+        current = clicks.last(7).sum
+        { keyword: keyword, previous: previous, current: current, delta: current - previous }
+      end
+      snapshots = checked.filter_map { |id, days| id if days.any? { |date| date >= dates.first } }
+      { finish: finish, changes: changes, snapshot_ids: snapshots }
     end
 
     private

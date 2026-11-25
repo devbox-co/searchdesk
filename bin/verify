@@ -9,7 +9,9 @@ check() {
   docker compose run --rm --no-deps -e RAILS_ENV=test \
     -e DATABASE_URL=postgresql://workspace@db/seo_workspace_test \
     -e GOOGLE_CLIENT_ID= -e GOOGLE_CLIENT_SECRET= -e DATAFORSEO_ENABLED=false \
-    -e ANTHROPIC_API_KEY= -e SEO_AI_MODEL= -e SMTP_HOST= web bin/rails "$@"
+    -e DATAFORSEO_LOGIN= -e DATAFORSEO_PASSWORD= -e ANTHROPIC_API_KEY= -e SEO_AI_MODEL= -e SMTP_HOST= \
+    -e SEARCHDESK_OWNER_CONTROLLED_AI=true web env -u DATAFORSEO_ALLOWED_SERIES_IDS \
+    -u DATAFORSEO_DAILY_TASK_LIMIT -u DATAFORSEO_31_DAY_TASK_LIMIT bin/rails "$@"
 }
 check db:prepare
 check zeitwerk:check

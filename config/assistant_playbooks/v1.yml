@@ -1,0 +1,44 @@
+# Adapted from the reporting and evidence methods attributed in docs/skills.md.
+# Order determines the order of suggested investigations on the Assistant page.
+priority:
+  title: Keyword actions
+  question: Which open keyword action should I check first, and what evidence supports it?
+  sources: [Keyword actions]
+  next_step: Open the action to review the observed page or the consecutive ranking changes.
+  instruction: Prefer a specific open action over a total. Link the affected keyword, device and observation. Suggest reviewing the evidence before changing a page.
+weekly_clicks:
+  title: Weekly search clicks
+  question: Which tracked searches gained or lost clicks this week?
+  sources: [Weekly search clicks]
+  next_step: Check how many searches had readings in both weeks before acting on a change.
+  instruction: Use the prepared comparison of matching weeks. Keep its coverage, dates and absolute click counts together. A change of a few clicks alone is weak evidence for editing a page.
+movement:
+  title: Local ranking changes
+  question: Which local organic keywords changed most since their starting positions?
+  sources: [DataForSEO, Manual import, Simulated demonstration]
+  next_step: Open the keyword history for the affected device and compare completed readings.
+  instruction: Start with a measured change on one device. Distinguish a first observation, a measured rank, an incomplete reading and a verified result outside the tracked range. Identify simulated readings as demo data.
+maps:
+  title: Google Maps coverage
+  question: How much of my scanned area ranks in the top three on Google Maps?
+  sources: [Local Falcon]
+  next_step: Open the dated scan to see which locations ranked in the top three.
+  instruction: Give the scan date, keyword and share of measured locations in the top three. Describe movement only when the evidence supplies a matched comparison. A grid percentage measures sampled locations.
+search_performance:
+  title: Google search performance
+  question: How did Search Console clicks and impressions change between reporting periods?
+  sources: [Google Search Console]
+  next_step: Compare both reporting periods in Search Console and check their dates before investigating a page.
+  instruction: Choose the two adjacent property totals with their dates and scope. Select query evidence only when it addresses the question. Keep click changes separate from hypotheses about demand or page quality.
+traffic:
+  title: Organic website visits
+  question: What does GA4 show about visits from Google organic search?
+  sources: [Google Analytics 4]
+  next_step: Review organic sessions for the measured period and verify how the business counts enquiries.
+  instruction: Use only the reported organic sessions or engagement for the stated host and period. Keep unverified key events separate from confirmed enquiries. Retain sampling and threshold caveats.
+campaign:
+  title: Imported campaign rankings
+  question: What do my saved Semrush campaign positions show?
+  sources: [Semrush Position Tracking]
+  next_step: Open the campaign evidence and check its date, market and device.
+  instruction: Use the saved campaign's date and feature-inclusive ranking method. Keep this measurement separate from local organic ranks.

@@ -2,6 +2,9 @@ require "uri"
 
 class Site < ApplicationRecord
   belongs_to :workspace
+  has_many :site_audits, dependent: :delete_all
+  has_one :ai_setting, dependent: :destroy
+  has_many :ai_runs, dependent: :delete_all
   has_many :source_snapshots, dependent: :delete_all
   has_many :project_tasks, dependent: :delete_all
   has_many :keywords, dependent: :destroy

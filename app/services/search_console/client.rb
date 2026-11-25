@@ -22,6 +22,11 @@ module SearchConsole
       url && url.path == "/" && url.port == url.default_port && !url.fragment && !url.query && Tracking::ResultUrl.host_matches?(host, url.host)
     end
 
+    def sitemaps(token:, property:)
+      encoded = ERB::Util.url_encode(property)
+      json_request("#{GOOGLE}/sites/#{encoded}/sitemaps", token: token).fetch("sitemap", [])
+    end
+
     def query(token:, property:, payload:)
       encoded = ERB::Util.url_encode(property)
       json_request("#{GOOGLE}/sites/#{encoded}/searchAnalytics/query", token: token, json: payload).fetch("rows", [])

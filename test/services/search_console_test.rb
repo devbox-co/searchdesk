@@ -2,6 +2,8 @@ require "test_helper"
 
 class SearchConsoleTest < ActiveSupport::TestCase
   class FakeClient
+    def sitemaps(token:, property:) = []
+
     attr_reader :requests
 
     def initialize
@@ -17,7 +19,7 @@ class SearchConsoleTest < ActiveSupport::TestCase
       raise "wrong scope" unless token == "fresh-access" && property == "sc-domain:sample.test" && payload[:dataState] == "final" && payload[:type] == "web"
       @requests << payload
       if payload[:dimensions] == ["date"]
-        [{ "keys" => ["2026-11-20"] }]
+        [{ "keys" => ["2026-11-20"], "clicks" => 1, "impressions" => 4, "ctr" => 0.25, "position" => 6.25 }]
       elsif payload[:dimensions]
         [metrics.merge("keys" => ["heating", "https://sample.test/heating", "MOBILE"]),
          metrics.merge("keys" => ["heating", "https://sample.test/contact?email=hidden", "DESKTOP"]),
@@ -57,6 +59,7 @@ class SearchConsoleTest < ActiveSupport::TestCase
       assert_equal "2026-11-20", c.data_through.iso8601
       assert_equal ["2026-10-24", "2026-11-20"], c.report.fetch("current").values_at("start", "end")
       assert_equal 3, c.report.dig("current", "metrics", "clicks")
+      assert_equal [{"date" => "2026-11-20", "clicks" => 1, "impressions" => 4}], c.report.fetch("performance_days")
       assert_equal 1, c.report.fetch("keyword_pages").length
       refute_includes c.report.to_json, "unrelated.test"
       refute_includes c.report.to_json, "other.sample.test"

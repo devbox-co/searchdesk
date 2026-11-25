@@ -4,38 +4,43 @@
   <title><%= content_for?(:title) ? "#{yield(:title)} · Searchdesk" : "Searchdesk · SEO workspace" %></title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <%= csrf_meta_tags %><%= csp_meta_tag %>
-  <%= stylesheet_link_tag "/workspace.css" %>
+  <%= stylesheet_link_tag "/workspace.css", "/rankings.css", "/integration-guide.css", "/assistant.css?v=20261125-3", "/overview.css?v=20261125", "/maps-visibility.css", "/site-audit.css", "/schedules.css", "data-turbo-track": "reload" %>
   <%= javascript_importmap_tags %>
   <meta name="turbo-cache-control" content="no-cache">
 </head>
-<body>
-  <a class="skip" href="#main">Skip to content</a>
-  <header class="top"><div class="shell bar">
-    <%= link_to "Searchdesk", current_user && current_site ? rankings_path : login_path, class: "brand" %>
-    <% if current_user %>
-      <div class="account">
-        <% if current_site %><span class="site-tag"><%= current_site.name %></span><% end %>
-        <details class="switcher"><summary>Workspace</summary><div class="switchmenu">
-          <strong><%= current_user.email %></strong>
-          <% unless current_user.email_verified_at %><%= link_to "Verify email address", new_email_verification_path %><% end %>
-          <% available_sites.each do |site| %>
-            <%= button_to site.name, select_site_path(site), method: :post, class: "menu-item", disabled: site == current_site %>
-          <% end %>
-          <% if can_manage_site? %><%= link_to "Set up a site", onboarding_path %><% end %>
-          <% if current_site && workspace_owner? %><%= link_to "Workspace members", workspace_members_path %><% end %>
-          <%= button_to "Sign out", logout_path, method: :delete, class: "menu-item" %>
-        </div></details>
-      </div>
-    <% else %><%= link_to "Integrations", public_catalogue_path, class: "header-link" %><% end %>
-  </div></header>
-  <main id="main" class="shell">
-    <% if current_user && current_site %>
+<% in_workspace = current_user && current_site %>
+<body class="<%= in_workspace ? "workspace-layout" : "public-layout" %>">
+  <a class="skip" href="#main" data-turbo="false">Skip to content</a>
+  <% if in_workspace %>
+    <% navigation = workspace_navigation %>
+    <aside class="rail" aria-label="Searchdesk navigation">
+      <div class="rail-brand"><%= render "shared/brand" %></div>
       <nav class="primary-nav" aria-label="Workspace">
-        <% [["Rankings", rankings_path, %w[dashboard keywords rank_imports]], ["Actions", actions_path, %w[keyword_actions action_drafts project_tasks]], ["Integrations", integrations_path, %w[integrations search_console source_snapshots project_imports]]].each do |label, path, controllers| %>
-          <%= link_to label, path, aria: {current: controllers.include?(controller_name) ? "page" : nil} %>
+        <% navigation.each do |icon, label, path, controllers| %>
+          <%= link_to path, class: "nav-#{icon}", aria: { label: label, current: controllers.include?(controller_name) ? "page" : nil } do %>
+            <%= ui_icon(icon, size: 20) %>
+            <% if icon == :tasks %><span class="nav-wide-label"><%= label %></span><span class="nav-short-label">Tasks</span>
+            <% else %><span><%= label %></span><% end %>
+          <% end %>
         <% end %>
       </nav>
+      <%= link_to "https://#{current_site.host}", target: "_blank", rel: "noopener noreferrer", class: "rail-site" do %>
+        <%= ui_icon(:globe, size: 20) %>
+        <span>View website<small><%= current_site.host.delete_prefix("www.") %></small></span><%= ui_icon(:external_link, size: 13) %>
+      <% end %>
+    </aside>
+  <% end %>
+  <header class="top">
+    <% if in_workspace %>
+      <div class="breadcrumb"><%= ui_icon(:building, size: 17) %><span>Workspace</span><%= ui_icon(:chevron_right, size: 13) %>
+        <b><%= navigation.find { |_, _, _, controllers| controllers.include?(controller_name) }&.second || "Settings" %></b>
+      </div>
     <% end %>
+    <div class="top-brand"><%= render "shared/brand" %></div>
+    <% if current_user %><%= render "shared/workspace_switcher" %>
+    <% else %><%= link_to "Integrations", public_catalogue_path, class: "header-link" %><% end %>
+  </header>
+  <main id="main" tabindex="-1" class="shell">
     <% flash.each do |kind, message| %><p class="flash <%= kind %>" role="status"><%= message %></p><% end %>
     <%= yield %>
   </main>

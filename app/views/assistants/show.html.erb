@@ -1,0 +1,75 @@
+<% content_for :title, "Assistant" %>
+<header class="hero">
+  <div><p class="eyebrow"><%= current_site.name %></p><h1>SEO assistant</h1></div>
+  <% if workspace_owner? %><%= link_to assistant_settings_path, class: "button" do %><%= ui_icon(:settings) %> Assistant settings<% end %><% end %>
+</header>
+<div class="ai-layout">
+  <div class="ai-column">
+    <section class="panel ai-card ai-guided-review" aria-labelledby="review-heading">
+      <h2 id="review-heading"><%= ui_icon(:actions) %> What needs attention?</h2>
+      <p class="ai-meta">Saved site evidence · <%= time_tag @review_day, compact_date(@review_day) %></p>
+      <% if @review.any? %>
+        <ul class="ai-review-list">
+          <% @review.each do |playbook, fact| %><li>
+            <% reading = AiAssistant::OwnerBrief.for_fact(fact) %>
+            <h3><%= reading&.headline || playbook.title %></h3>
+            <p><%= reading&.meaning || playbook.next_step %></p>
+            <% if reading&.action.present? %><p class="ai-review-step"><%= reading.action %></p><% end %>
+            <%= ai_citation(fact, label: "View evidence · #{fact.fetch("source")}") %>
+          </li><% end %>
+        </ul>
+      <% else %>
+        <p>Your review will appear when a tracked keyword or a selected data source has reported a result.</p>
+        <div class="ai-controls"><%= link_to "View keyword tracking", rankings_path %><%= link_to "Check data sources", integrations_path %></div>
+      <% end %>
+    </section>
+    <% if can_manage_site? %>
+      <section class="panel ai-card ai-ask">
+        <h2><%= ui_icon(:sparkles) %> Explore with AI</h2>
+        <% if @can_ask %>
+          <%= render "playbook_questions", playbooks: @playbooks, parent: nil %>
+          <%= render "composer", parent: nil %>
+        <% elsif workspace_owner? %>
+          <p><%= ai_account_guidance(ai_connection_label(@connection)) || "Enable the assistant in site settings to start asking questions." %></p>
+          <%= link_to "Review OpenAI setup", assistant_settings_path, class: "button solid" %>
+        <% else %>
+          <p>Ask the workspace owner to enable manager questions and verify the OpenAI connection.</p>
+        <% end %>
+      </section>
+    <% end %>
+    <% if @history.any? %>
+      <section class="panel ai-card">
+        <h2><%= ui_icon(:file_text) %> Your recent questions</h2>
+        <ul class="ai-history">
+          <% @history.each do |run| %><li>
+            <%= link_to ai_run_title(run), assistant_run_path(run) %>
+            <small><%= ai_local_datetime(run.created_at) %> · <%= ai_run_label(run) %></small>
+          </li><% end %>
+        </ul>
+      </section>
+    <% end %>
+  </div>
+  <section class="panel ai-card ai-brief">
+    <h2><%= ui_icon(:calendar) %> Daily briefs</h2>
+    <p class="ai-meta">Reporting time zone · <%= current_site.time_zone %></p>
+    <% if @today_brief && !%w[complete fallback].include?(@today_brief.status) %>
+      <p><strong>Today's brief · <%= ai_run_label(@today_brief) %></strong></p>
+      <p><%= %w[pending running].include?(@today_brief.status) ? "The background worker is preparing this report." : ai_failure_guidance(@today_brief) %></p>
+      <p><%= link_to "View brief status", assistant_run_path(@today_brief) %>
+        <% unless %w[pending running].include?(@today_brief.status) %> · <%= link_to "Review settings", assistant_settings_path %><% end %></p>
+    <% elsif !@setting.enabled? || !@setting.daily_brief_enabled? %>
+      <p>Automatic briefs are off for this site.</p>
+      <% if workspace_owner? %><%= link_to "Set up daily briefs", assistant_settings_path(anchor: "site-settings") %><% end %>
+    <% elsif ai_connection_label(@connection) != "Ready" %>
+      <p>Automatic briefs are paused. <%= workspace_owner? ? ai_account_guidance(ai_connection_label(@connection)) : "The workspace owner can check the OpenAI connection." %></p>
+    <% elsif @briefs.first&.report_on != @review_day %>
+      <p>Today's brief is due after 09:00 local time, once rankings settle, or from 12:00 with the available readings. Keep the Searchdesk worker running.</p>
+    <% end %>
+    <% if @briefs.any? %>
+      <ul class="ai-history"><% @briefs.each do |run| %><li>
+        <%= link_to ai_run_title(run), assistant_run_path(run) %>
+        <small><%= ai_run_label(run) %></small>
+      </li><% end %></ul>
+    <% end %>
+  </section>
+</div>

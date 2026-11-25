@@ -2,10 +2,16 @@ module LocalFalcon
   class MapsSummary
     attr_reader :snapshot
 
-    def self.latest(site)
-      scans = SourceSnapshot.visible_for(site).where(provider: "Local Falcon").where.not(keyword: [nil, ""])
+    def self.scan_scope(site)
+      SourceSnapshot.visible_for(site).where(provider: "Local Falcon").where.not(keyword: [nil, ""])
         .where("external_id ~ '^[0-9a-f]{15}$' AND metrics ? 'grid_size'")
         .where("metrics->>'platform' = 'google' OR (metrics->>'platform' IS NULL AND scope ILIKE '%Google Maps%')")
+    end
+
+    def self.latest(site, through: nil, keywords: [])
+      scans = scan_scope(site)
+      scans = scans.where(observed_on: ..through) if through
+      scans = scans.where("LOWER(keyword) IN (?)", keywords.map(&:downcase)) if keywords.any?
       # Keep the latest observation for each exact keyword before limiting the number shown.
       by_term = scans.select("DISTINCT ON (LOWER(keyword)) source_snapshots.*")
         .order(Arel.sql("LOWER(keyword), observed_on DESC, id DESC"))

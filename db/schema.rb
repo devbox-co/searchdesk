@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_24_008000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_25_013000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -24,6 +24,72 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_008000) do
     t.jsonb "input_snapshot", default: {}, null: false
     t.index ["keyword_action_id", "skill_version", "input_digest"], name: "unique_action_draft_input", unique: true
     t.index ["keyword_action_id"], name: "index_action_drafts_on_keyword_action_id"
+  end
+
+  create_table "ai_connections", force: :cascade do |t|
+    t.bigint "workspace_id", null: false
+    t.text "api_key"
+    t.string "project_label"
+    t.integer "monthly_budget_cents", default: 0, null: false
+    t.uuid "revision", null: false
+    t.string "status", default: "untested", null: false
+    t.datetime "last_verified_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["workspace_id"], name: "index_ai_connections_on_workspace_id", unique: true
+    t.check_constraint "monthly_budget_cents >= 0", name: "ai_budget_nonnegative"
+  end
+
+  create_table "ai_runs", force: :cascade do |t|
+    t.bigint "site_id", null: false
+    t.bigint "user_id"
+    t.bigint "parent_id"
+    t.string "kind", null: false
+    t.string "status", default: "pending", null: false
+    t.text "question"
+    t.date "report_on", null: false
+    t.uuid "connection_revision"
+    t.uuid "setting_revision"
+    t.string "recipe_version"
+    t.string "model"
+    t.string "failure_code"
+    t.string "provider_request_id"
+    t.string "request_key", null: false
+    t.jsonb "evidence", default: {}, null: false
+    t.jsonb "answer", default: {}, null: false
+    t.bigint "reserved_microusd", default: 0, null: false
+    t.bigint "actual_microusd"
+    t.integer "input_tokens"
+    t.integer "output_tokens"
+    t.datetime "attempted_at"
+    t.datetime "finished_at"
+    t.datetime "erased_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["parent_id"], name: "index_ai_runs_on_parent_id"
+    t.index ["site_id", "attempted_at"], name: "index_ai_runs_on_site_id_and_attempted_at", where: "(attempted_at IS NOT NULL)"
+    t.index ["site_id", "report_on", "recipe_version"], name: "one_ai_brief_per_day_and_recipe", unique: true, where: "((kind)::text = 'brief'::text)", nulls_not_distinct: true
+    t.index ["site_id", "request_key"], name: "index_ai_runs_on_site_id_and_request_key", unique: true
+    t.index ["site_id"], name: "index_ai_runs_on_site_id"
+    t.index ["status", "created_at"], name: "index_ai_runs_on_status_and_created_at", where: "((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('running'::character varying)::text]))"
+    t.index ["user_id"], name: "index_ai_runs_on_user_id"
+  end
+
+  create_table "ai_settings", force: :cascade do |t|
+    t.bigint "site_id", null: false
+    t.boolean "enabled", default: false, null: false
+    t.boolean "managers_enabled", default: false, null: false
+    t.boolean "daily_brief_enabled", default: false, null: false
+    t.boolean "share_google", default: false, null: false
+    t.boolean "share_maps", default: false, null: false
+    t.boolean "share_semrush", default: false, null: false
+    t.text "services"
+    t.text "priorities"
+    t.text "enquiry_definition"
+    t.uuid "revision", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["site_id"], name: "index_ai_settings_on_site_id", unique: true
   end
 
   create_table "analytics_connections", force: :cascade do |t|
@@ -137,7 +203,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_008000) do
     t.jsonb "result", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.uuid "ai_grant_revision", default: -> { "gen_random_uuid()" }, null: false
     t.index ["site_id"], name: "index_local_falcon_connections_on_site_id", unique: true
+  end
+
+  create_table "local_falcon_street_maps", force: :cascade do |t|
+    t.bigint "source_snapshot_id", null: false
+    t.string "report_key", null: false
+    t.binary "png"
+    t.datetime "retry_after"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["source_snapshot_id"], name: "index_local_falcon_street_maps_on_source_snapshot_id", unique: true
   end
 
   create_table "login_sessions", force: :cascade do |t|
@@ -208,6 +285,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_008000) do
     t.jsonb "report", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.uuid "ai_grant_revision", default: -> { "gen_random_uuid()" }, null: false
     t.index ["site_id"], name: "index_search_console_connections_on_site_id", unique: true
   end
 
@@ -235,6 +313,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_008000) do
     t.index ["search_console_connection_id"], name: "index_gsc_reports_on_connection"
   end
 
+  create_table "site_audits", force: :cascade do |t|
+    t.bigint "site_id", null: false
+    t.string "host", null: false
+    t.string "status", default: "queued", null: false
+    t.jsonb "report", default: {}, null: false
+    t.string "failure_reason"
+    t.datetime "started_at"
+    t.datetime "finished_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "trigger_kind", default: "manual", null: false
+    t.index ["site_id", "created_at"], name: "index_site_audits_on_site_id_and_created_at"
+    t.index ["site_id"], name: "index_site_audits_on_site_id"
+    t.index ["site_id"], name: "one_active_site_audit", unique: true, where: "((status)::text = ANY (ARRAY[('queued'::character varying)::text, ('running'::character varying)::text]))"
+  end
+
   create_table "site_report_links", force: :cascade do |t|
     t.bigint "site_id", null: false
     t.string "provider", limit: 48, null: false
@@ -259,6 +353,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_008000) do
     t.string "rank_country_code", limit: 2
     t.datetime "rank_location_verified_at"
     t.string "rank_location_name"
+    t.boolean "weekly_site_audit_enabled", default: false, null: false
     t.index ["workspace_id", "host"], name: "index_sites_on_workspace_id_and_host", unique: true
     t.index ["workspace_id"], name: "index_sites_on_workspace_id"
     t.check_constraint "tracking_mode::text = ANY (ARRAY['manual'::character varying::text, 'demo'::character varying::text, 'dataforseo'::character varying::text])", name: "site_tracking_mode_valid"
@@ -427,6 +522,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_008000) do
     t.string "keyword"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "map_grid"
     t.index ["site_id", "observed_on"], name: "index_source_snapshots_on_site_id_and_observed_on"
     t.index ["site_id", "provider", "external_id"], name: "index_source_snapshots_on_site_id_and_provider_and_external_id", unique: true
     t.index ["site_id"], name: "index_source_snapshots_on_site_id"
@@ -489,6 +585,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_008000) do
   end
 
   add_foreign_key "action_drafts", "keyword_actions", on_delete: :cascade
+  add_foreign_key "ai_connections", "workspaces", on_delete: :cascade
+  add_foreign_key "ai_runs", "ai_runs", column: "parent_id", on_delete: :nullify
+  add_foreign_key "ai_runs", "sites", on_delete: :cascade
+  add_foreign_key "ai_runs", "users", on_delete: :nullify
+  add_foreign_key "ai_settings", "sites", on_delete: :cascade
   add_foreign_key "analytics_connections", "sites", on_delete: :cascade
   add_foreign_key "analytics_grants", "sites", on_delete: :cascade
   add_foreign_key "analytics_grants", "users", on_delete: :cascade
@@ -497,6 +598,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_008000) do
   add_foreign_key "keyword_page_assignments", "keywords"
   add_foreign_key "keywords", "sites"
   add_foreign_key "local_falcon_connections", "sites", on_delete: :cascade
+  add_foreign_key "local_falcon_street_maps", "source_snapshots", on_delete: :cascade
   add_foreign_key "login_sessions", "users"
   add_foreign_key "memberships", "users"
   add_foreign_key "memberships", "workspaces"
@@ -506,6 +608,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_24_008000) do
   add_foreign_key "search_console_grants", "sites", on_delete: :cascade
   add_foreign_key "search_console_grants", "users", on_delete: :cascade
   add_foreign_key "search_console_reports", "search_console_connections", on_delete: :cascade
+  add_foreign_key "site_audits", "sites", on_delete: :cascade
   add_foreign_key "site_report_links", "sites", on_delete: :cascade
   add_foreign_key "sites", "workspaces"
   add_foreign_key "solid_queue_batch_executions", "solid_queue_batches", column: "batch_id", on_delete: :cascade

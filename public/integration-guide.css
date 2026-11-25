@@ -1,0 +1,52 @@
+.integration-hero { justify-content: space-between; align-items: end; }
+.integration-sections { display: flex; gap: 1.3rem; margin: 0 0 1.75rem; }
+.integration-sections a, .integration-coverage article > a, .coverage-option > a, .coverage-links a { font-weight: 650; text-underline-offset: .2em; }
+.integration-coverage, .integration-directory { scroll-margin-top: 1.1rem; }
+.coverage-heading { margin-bottom: 1.05rem; }
+.integration-choice { border-left: .25rem solid var(--accent, #3056c7); background: var(--washed, #f1f4f9); color: var(--ink, #17253d); padding: .9rem 1.25rem; margin: 0 0 1.1rem; border-radius: .4rem; }
+.integration-choice h2 { margin: 0; font-size: 1.04rem; }
+.integration-choice p { margin: .3rem 0 0; max-width: 92ch; }
+.integration-choice-lead { font-weight: 580; }
+.coverage-heading h2, .integration-directory h2, .integration-coverage h3, .integration-coverage h4 { margin: 0; line-height: 1.25; }
+.coverage-heading > p, .integration-coverage article p { margin: .4rem 0 .7rem; color: var(--muted, #4d6261); }
+.coverage-local, .coverage-item, .integration-service { border: 1px solid var(--line, #d6dfdf); background: var(--paper, #fff); border-radius: .85rem; min-width: 0; }
+.coverage-local { padding: 1.25rem 1.4rem; }
+.coverage-local header { border-bottom: 1px solid var(--line, #d6dfdf); margin-bottom: 1rem; padding-bottom: .4rem; }
+.coverage-options, .coverage-other, .integration-services { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.coverage-options { gap: 1.5rem; }
+.coverage-option + .coverage-option { border-left: 1px solid var(--line, #d6dfdf); padding-left: 1.5rem; }
+.coverage-option, .coverage-item { display: flex; flex-direction: column; align-items: start; }
+.integration-coverage small { color: var(--muted, #4d6261); font-size: .82rem; margin: auto 0 .4rem; }
+.coverage-other { margin-top: 1rem; }
+.coverage-item, .integration-service { padding: 1rem 1.2rem; }
+.coverage-item h3, .coverage-local h3 { font-size: 1.1rem; }
+.integration-coverage h3 svg { color: var(--accent, #3056c7); vertical-align: -.18em; margin-right: .2rem; }
+.coverage-item p, .coverage-option p, .integration-service p { font-size: .94rem; line-height: 1.45; }
+.coverage-links { display: flex; flex-wrap: wrap; gap: .2rem 1rem; }
+.integration-directory { margin-top: 2rem; }
+.integration-filter { align-items: end; margin: .8rem 0 1.1rem; }
+.integration-filter span { align-self: center; color: var(--muted, #4d6261); }
+.integration-services { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .7rem; }
+.integration-service .service { display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: .4rem; text-decoration: none; }
+.integration-service .service-name { font-size: 1rem; font-weight: 700; color: var(--link, #244bb1); margin: 0; text-decoration: underline; text-underline-offset: .18em; }
+.integration-service .integration-badge { display: inline-flex; align-items: center; gap: .28rem; }
+.integration-badge.badge-live { color: #145a42; background: #dcf2e7; }
+.integration-badge.badge-saved { color: #473788; background: #eeebfa; }
+.integration-badge.badge-pending { color: #244b86; background: #e6eefb; }
+.integration-badge.badge-attention { color: #804208; background: #fff0d6; }
+.integration-badge.badge-neutral { color: #465569; background: #edf0f4; }
+.integration-service p { margin: .5rem 0 .3rem; }
+.integration-service small { display: block; color: var(--muted, #4d6261); }
+.integration-planned { margin-top: 1rem; border-top: 1px solid var(--line, #d6dfdf); }
+.integration-planned summary { cursor: pointer; font-weight: 650; padding: 1rem 0; }
+.integration-worker { margin-top: 1.25rem; }
+@media (max-width: 850px) {
+  .integration-services { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 620px) {
+  .coverage-options, .coverage-other, .integration-services { grid-template-columns: minmax(0, 1fr); }
+  .coverage-local, .coverage-item, .integration-service { padding: 1rem; }
+  .coverage-option + .coverage-option { border-left: 0; border-top: 1px solid var(--line, #d6dfdf); padding: 1rem 0 0; }
+  .coverage-options { gap: 1rem; }
+  .integration-sections { margin-bottom: 1rem; }
+}

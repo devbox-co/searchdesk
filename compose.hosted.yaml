@@ -1,0 +1,32 @@
+name: searchdesk-hosted
+
+x-hosted-environment: &hosted-environment
+  APP_PROTOCOL: https
+  SEARCHDESK_OWNER_CONTROLLED_AI: "false"
+
+services:
+  prepare:
+    environment: *hosted-environment
+  web:
+    ports: !reset []
+    environment: *hosted-environment
+  jobs:
+    environment: *hosted-environment
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      APP_HOST: ${APP_HOST:?Set APP_HOST to the public DNS hostname}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      web: {condition: service_healthy}
+
+volumes:
+  caddy_data:
+  caddy_config:

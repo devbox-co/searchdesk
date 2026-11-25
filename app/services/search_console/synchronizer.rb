@@ -23,6 +23,7 @@ module SearchConsole
       end
       builder = ReportBuilder.new(client: client, token: token, property: property, site: connection.site)
       report = builder.call
+      report["sitemaps"] = SitemapSummary.fetch(client: client, token: token, property: property)
       connection.with_lock do
         return false unless connection.sync_key == key && connection.property == property
         if builder.position_country != DailyPositions.country_for(connection.site.reload)

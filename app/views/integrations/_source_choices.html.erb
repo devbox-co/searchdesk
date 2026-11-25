@@ -1,0 +1,19 @@
+<aside class="integration-choice" aria-labelledby="source-choice-heading">
+  <h2 id="source-choice-heading"><%= heading %></h2>
+  <% if local_assigns[:site] %>
+    <p class="integration-choice-lead">
+      <% if @campaign %>Start with your imported Semrush campaign for <%= @campaign[:location] %> on <%= @campaign[:device] %>.
+        <% if site.tracking_mode == "dataforseo" %><%= integration_state("dataforseo")[:detail] %>
+        <% else %>DataForSEO alone can add scheduled organic-only positions when you need that separate reading.<% end %>
+      <% elsif site.tracking_mode == "dataforseo" %><%= integration_state("dataforseo")[:detail] %> DataForSEO alone can cover scheduled local organic checks.
+      <% elsif site.tracking_mode == "manual" %>You can bring your own local readings. If you want scheduled local organic ranks, DataForSEO alone covers that job on a managed site.
+      <% else %>This site uses example local readings. For a real site, DataForSEO alone covers scheduled local organic ranks.<% end %>
+    </p>
+  <% else %>
+    <p class="integration-choice-lead">DataForSEO alone covers scheduled local organic ranks. If you already use Semrush Position Tracking, import that campaign first and review the location, device and included search features.</p>
+  <% end %>
+  <p><% if local_assigns[:site] && !@campaign %>Import Semrush if you already use its campaign. <% end %>
+    <% if local_assigns[:site] && integration_state("local-falcon")[:phase] == :connected %>Use your existing Local Falcon connection for Maps grids and any linked Business Profile activity.
+    <% else %>Add Local Falcon for Maps grids. If your Business Profile is linked there, the same connection can also report listing activity.<% end %>
+    Use the free Google reports for search demand (Search Console) and website visits (GA4).</p>
+</aside>

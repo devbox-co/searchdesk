@@ -1,12 +1,15 @@
 # Development handoff
 
-Searchdesk runs one Rails application image for the web service and background jobs. A business owner chooses a site, keywords and data sources. The application collects authorised data, evaluates evidence and prepares reviews. The technical lead accepts a work package after reproducing its owner-facing workflow and its failure paths.
+Searchdesk runs one Rails application image for the web service and background jobs. An owner connects services and chooses keywords. The worker collects authorised data, evaluates evidence and prepares reviews while the browser is closed. Start a new development task in the repository containing this document. Use the [agent guide](../AGENTS.md) for local commands and safe verification, and the [README](../README.md) for owner setup.
+
+SkinHampshire is an existing customer of this installation. Use the selected site's **Integrations** and **Schedules** pages for its current configuration, most recent results and worker health. Use fictional sites and synthetic provider responses for development tests. The public customer website and the Searchdesk dashboard have separate deployment targets.
 
 ## Implemented in the local build
 
 | Area | Working entry point | Acceptance contract |
 | --- | --- | --- |
 | Accounts and tenancy | Sign in, sign up, account recovery, Workspace menu | Account-specific login sessions, owner/manager/viewer permissions, site switching, verified email for membership grants, stale-form rejection and per-user recovery. |
+| Overview | `/dashboard` | Local Falcon map and scan history, final Search Console clicks and impressions, local organic rank bands by device, and the latest site audit. A published daily SEO brief shows its date, first finding and a link to the full report for members who can read it. Older dashboard links with ranking-table filters redirect to Rankings. |
 | Rankings | Rankings → keyword | First comparable observation per series, today's value, movement, actual URL, source, date and selected device. Pausing one device preserves its baseline. Manual files are validated against the selected series. |
 | Automatic collection | Site setup → managed source | Resolve the place with the provider, reserve the daily task, submit once and poll for a matching result. Reconcile by correlation key after a lost acknowledgement. Global submission limit and per-site mode control spend. |
 | Search Console | Integrations → Google Search Console | Server-side OAuth with state and PKCE. Owner selects a matching verified property. Encrypt tokens. Show date-scoped final totals, tracked-query detail and last successful sync. Rankings can display exact-query, country-filtered, all-device average position for each Pacific reporting day. Disconnect clears that site's credentials and reports. |
@@ -14,9 +17,54 @@ Searchdesk runs one Rails application image for the web service and background j
 | Google Analytics | Integrations → Google Analytics 4 | An independent read-only grant verifies property, web stream and hostname before collecting current and previous 28-day Google organic traffic. Key-event counts require separate validation before they can be reported as enquiries. |
 | Project migration | Source evidence and project tasks | Idempotent, site-scoped imports retain dates, metrics, source records and stable task IDs. Managers can track a working status and notes while preserving the imported register. |
 | Actions and AI | Actions → evidence / preview / business wording | Prepare a versioned review for a preferred-page mismatch or a sustained decline. Show the triggering observations. The optional server model selects a line from approved public descriptions. Revocation and limits are checked at dispatch. |
-| Deployment | Start.command, bin/start, render.yaml | Loopback Rails service, privately networked PostgreSQL, migrations, durable worker and generated local credentials. The standalone project can be hosted as a Render Blueprint. |
+| Site assistant | Assistant → Assistant settings, questions and daily briefs | Workspace-owned encrypted OpenAI key, monthly allowance, site consent and cited project evidence. The worker reserves each request before dispatch and recovers interrupted work. Opening the Assistant shows cited findings from saved, eligible data. One-click questions and daily briefs use matching playbooks and the site reporting date. |
+| Site audit | `/site_audit` | Workspace owners can request a sample or enable weekly crawling. Site members can read saved findings, matching Search Console performance and submitted sitemap summaries. Google's Crawl Stats opens in Search Console. The built-in crawler needs no paid audit provider. |
+| Schedules | `/schedules` | A read-only view of source refreshes, keyword collection, daily briefs, crawls and provider-run campaigns. Owners can inspect timing for shared worker checks. Each row links to its settings or results. |
+| Deployment | Start.command, bin/start, Dockerfile, compose.hosted.yaml, deploy/Caddyfile, render.yaml | Loopback Docker installation, [public managed or Docker VM deployment](hosting.md), and paid Render Blueprint. Hosted setups use a dedicated worker and private PostgreSQL. |
 
-Manual imports and the fictional demo are usable immediately. Scheduled organic collection, Search Console, model calls and outbound email each require their own operator setup. Manual source choice never produces synthetic observations. Real Google, DataForSEO and model credentials must be supplied through deployment configuration and a tenant's applicable consent.
+Manual imports and the fictional demo are usable immediately. Scheduled organic collection, Search Console, model calls and outbound email each require their own operator setup. Manual source choice never produces synthetic observations. The operator configures Google, DataForSEO and the optional action-wording service. On an owner-controlled installation, the workspace owner supplies the OpenAI project credential through Assistant settings.
+
+OpenAI bills the API organization separately from the Searchdesk workspace allowance. If Assistant settings shows **Credits exhausted**, check the API organization’s credit balance and the organization or project usage limits before rerunning the synthetic test. The evidence preview shows eligible saved facts for each selected source within the brief’s bounded context.
+
+The Overview preview and full report identify published AI briefs as **Prepared by Searchdesk AI**. A fallback reads **Built from local evidence**. The report and Overview use `AiAssistant::OwnerBrief` to present a takeaway and one first action from the original cited facts. Each finding opens to its saved measurements and source links. Reading a historical brief needs no new AI request.
+
+## Where to change a feature
+
+Paths below are relative to the repository root. Start at the owner-facing route in `config/routes.rb` and follow the controller to its service and test.
+
+| Task | First files to inspect | Regression to exercise |
+| --- | --- | --- |
+| Local rankings and actions | `app/services/tracking/{enrollment,record_result,dashboard,action_rules}.rb`, `app/jobs/tracking_collect_job.rb`, `test/services/keyword_tracking_test.rb`, `test/jobs/tracking_reservation_limits_test.rb` | Enrolment fingerprints the measurement settings. A change starts a new series. The first accepted ranked or outside observation supplies its baseline. A numeric delta needs two measured positions. Outside requires a complete top 30. Test incomplete days, pauses, both devices and an uncertain provider acknowledgement. |
+| Data sources and imports | `app/services/integration_catalogue.rb`, `app/services/{search_console,analytics,local_falcon,semrush}/`, `app/services/project_import.rb`, `test/integration/integration_coverage_test.rb` | The catalogue includes live connections, links and imports. DataForSEO supplies local organic measurements. Semrush's archive can include search features. Local Falcon supplies geographic Maps scans. Each method keeps its own dates, scope and baseline. Import the same file twice and check the site and source provenance. |
+| Accounts, evidence and provider access | `app/controllers/concerns/authentication.rb`, `app/models/source_snapshot.rb`, `test/integration/workspace_authentication_test.rb`, `test/integration/project_records_test.rb` | Resolve records through the user's membership and selected site. Recheck site, property, visibility and permission for reads and writes, including requests from a stale tab. Keep provider secrets in their configured encrypted storage and out of screenshots, fixtures and logs. |
+| OpenAI assistant and action wording | `app/services/ai_assistant/`, `app/models/ai_run.rb`, `app/jobs/ai_run_job.rb`, `config/seo_skills/`, `test/jobs/ai_run_job_test.rb`, `test/integration/skill_consent_test.rb` | The Responses API receives eligible facts under the site's sharing settings. The model selects fact IDs and suggested checks. Rails validates IDs and renders citations. The guided review and paid requests share the versioned catalogue in `config/assistant_playbooks/v1.yml`. See [skill sources and licences](skills.md) for provenance. The separate optional action-wording feature uses approved public descriptions. Preserve the budget reservation, access checks and uncertain-charge handling. |
+| Site audit and schedules | `app/services/site_audits/`, `app/models/site_audit.rb`, `app/services/schedules/`, `config/recurring.yml`, `test/jobs/site_audit_job_test.rb`, `test/integration/schedules_test.rb` | Crawl at most 20 public URLs with a budget of 28 requests and 120 seconds. Honour robots rules, public-address checks and host scope on redirects. Preserve partial results and their stop reason. A schedule page visit reads stored records. Verify its status labels against the actual job eligibility. |
+
+### Street maps and device filters
+
+The Google Maps panel on Overview selects a completed Local Falcon snapshot. `LocalFalcon::ScanGrid` binds the report to its place, keyword, date and grid. Coverage history compares matching coordinates, radius, units and grid size. `StreetMapsController` resolves the snapshot under the signed-in user's selected site. On first view, `LocalFalcon::StreetMapImage` retrieves the verified PNG from a fixed provider origin and stores it in `local_falcon_street_maps`. The browser loads the image through Searchdesk, including the full-size link. A failed fetch offers the saved pin grid and a retry. Preserve same-origin delivery when changing maps. Turbo navigation can retain the security policy from the page where a visit began.
+
+Device controls use scoped Turbo frames. The filter renderer in `app/javascript/application.js` updates the results in place and preserves the clicked control's position. The Overview frame includes the scan picker and both charts so their outgoing URLs carry the current filters. Standard link targets support direct visits. [Overview view](../app/views/overviews/show.html.erb) · [Map view](../app/views/dashboard/_map_visibility.html.erb) · [Map access tests](../test/integration/street_maps_test.rb) · [Overview tests](../test/integration/visibility_overview_test.rb) · [Keyword controls tests](../test/integration/keyword_controls_test.rb)
+
+For browser acceptance, enter Overview via Rankings, check the map shows street labels and numbered pins, switch to Pin grid and back, then select another saved scan. Scroll the rank chart controls into view and switch devices both ways. Check that the active device, values and URL change while the control holds its position. Repeat at a phone width, on the Rankings table and on keyword history. Use Back and Forward on Overview and verify that choosing a scan after changing the metric or device retains both. Request tests cover the server response. Viewport movement needs a browser.
+
+For a known comparison, the 24 November 2026 `botox basingstoke` scan showed top-three coverage at 29 of 49 locations (59.18%). The [acceptance log](verification.md) records which scans, viewport sizes and navigation paths were verified.
+
+### When work runs
+
+The `jobs` service runs Solid Queue against PostgreSQL. `config/recurring.yml` defines how often the scheduler checks. The jobs and connection models decide which sites are due. The Mac and Docker must be running for the local schedule.
+
+| Workflow | Check frequency | Eligibility and evidence |
+| --- | --- | --- |
+| Local rank collection | Every 5 minutes | New enrolments get a slot immediately. Regular slots are due from 08:00 in the series time zone. Missed days are marked missing. Manual slots wait for an import. Paid dispatch honours the allowlist when configured, the UTC daily limit and the rolling 31-day limit. |
+| Search Console and GA4 | Every 15 minutes | Each connection is eligible 24 hours after its successful sync, subject to its scope, status and retry delay. The saved report identifies the observation period. |
+| Local Falcon report import | Every 15 minutes | An eligible connection is due after 23 hours. Local Falcon schedules and runs campaigns. Searchdesk imports completed results and provider-reported campaign schedules. |
+| Daily assistant brief | Every 15 minutes | From 09:00 in the site time zone, once ranking collection settles. From noon it can proceed with available evidence. Eligibility also requires a tested connection, site opt-in and available workspace allowance. |
+| Website crawl | Every 10 minutes | The recovery job checks weekly opt-ins. The next weekly sample is due seven days after the most recent request for the current site and host. A manual crawl also starts this interval. |
+
+On an explicit request after a recipe upgrade, use `run = AiRun.request_current_brief!(site: site)` and enqueue `AiRunJob.perform_later(run.id)` if `run.status == "pending"`. This reuses an existing attempt for today’s recipe and preserves earlier reports and billing receipts. The automatic scheduler still reserves only one daily brief.
+
+Use `Schedules::WorkerMonitor` for queue process heartbeats and recurring job completions. A recent scheduler check only establishes that the check ran. A site's sync, scan, crawl or brief has its own result and timestamp.
 
 ### Daily Google position source
 
@@ -24,17 +72,19 @@ The collector requests the latest 28 final reporting days for each group of up t
 
 Historic imports use provider `gsc` and metrics marker `gsc_web_exact_query_property_all_devices_v1`. Store `country`, `property`, `search_type: web`, `device_scope: all`, dates and `daily` rows with date, clicks, impressions and average_position. Only complete, equivalently filtered UI exports should use `source_basis: complete_ui_report`. Live responses use `final_api` and keep the dates actually queried. A disconnect deletes live records for that integration and retains independently imported evidence.
 
-## Development tickets
+## Candidate work and release checks
 
-Each ticket can be handed to an engineer or a development agent with this directory as its working tree. Complete the first two tickets before enabling real provider collection at a hosted installation.
+The [AI assistant plan](ai-assistant-plan.md) records the design for the implemented questions and briefs. AI-01 below is a separate proposal for content drafting. The IDs are retained so earlier discussions stay traceable.
+
+Choose a ticket for the requested task and check the target environment's current evidence. INT-01 and INT-02 describe qualification of a particular account or deployment. For the existing local customer, inspect saved receipts, connections and dates first. A new charge, a disconnect or revoked consent changes that customer's service.
 
 | ID | Owner and dependency | Deliverable and acceptance |
 | --- | --- | --- |
 | INT-01 | Connector engineer, after an entitled operator supplies a test account and explicit task allowance | Qualify one managed organic series on a real town and keyword. Match vendor task receipt, device, timestamp, actual ranking page and billed amount. Repeat retrieval and restart the worker. Show the same single charge and one daily observation. Capture redacted fixtures for any vendor variation. |
 | INT-02 | Connector engineer, after a Google OAuth client and test property are available | Exercise real consent, selection, token refresh, final report and disconnect. Compare the dates, property totals and a tracked keyword/page with Google's own report. Revoke access and confirm that another tenant's grant is unaffected. |
-| OPS-01 | Platform engineer, before a hosted customer installation | Use the Blueprint with an authorised hosting account, set up SMTP, exercise a real recovery message and prove a PostgreSQL and encryption-key restore in an isolated instance. Before opening public sign-ups with a platform-paid rank provider, enforce per-workspace entitlement and an allowance alongside the global daily cap. Define backup expiry and tenant deletion procedures. Check hosting access-log treatment of OAuth and password-reset URLs. |
-| SEO-01 | Product engineer, can run independently of provider credentials | Extend page evidence with read-only checks of status, canonical, indexability, title and main heading for an enrolled site. Validate destinations on each retrieval. Store timestamp, exact page and which checks were possible. Build fixture tests and an owner-facing action using two comparable reads. |
-| MAP-01 | Integrations engineer, building on the private report reader | Extend automatic comparison to grids with verified matching coordinates, spacing, radius and keyword. Imported pin-level comparisons can already be displayed with their provenance. Adding paid scan creation requires its own explicit allowance and receipt. |
+| OPS-01 | Platform engineer, before a hosted customer installation | Use the [hosting guide](hosting.md) or the Render Blueprint with an authorised hosting account, set up SMTP, exercise a real recovery message and prove a PostgreSQL and encryption-key restore in an isolated instance. Before opening public sign-ups with a platform-paid rank provider, enforce per-workspace entitlement and an allowance alongside the global daily cap. Define backup expiry and tenant deletion procedures. Check hosting access-log treatment of OAuth and password-reset URLs. |
+| SEO-01 | Product engineer | The crawler already checks HTTP status, title, canonical presence, headings and indexing directives. Remaining candidate work is an evidence-linked action comparing findings from two comparable crawls. |
+| MAP-01 | Integrations engineer | The dashboard already compares coverage on matching grids and displays saved pin readings. Remaining candidate work is to compute and show individual pin gains and losses across matched scans. Paid scan creation would require its own explicit allowance and receipt. |
 | ACT-01 | Rails/WordPress engineer, after SEO-01 | Introduce one narrowly scoped link edit. Require a preview and exact owner approval, validate the original source before writing, verify both the saved source and the public page, and provide rollback. A failed or stale check must preserve the prior content. Develop against a disposable WordPress instance. |
 | MET-01 | Analytics engineer, after defining the site's qualified enquiry events | Build on the live GA4 reader by verifying enquiry definitions, duplicates and test traffic against the owner's business records before displaying qualified counts. Keep unverified events and missing data clearly labelled. |
 | AI-01 | Product/AI engineer, after the current wording contract is accepted | Extend approved-line selection to draft generation from owner-licensed site excerpts. Evaluate factual support, claims, citations, token budget, consent and per-sector review using synthetic inputs before enabling it. |
@@ -42,8 +92,8 @@ Each ticket can be handed to an engineer or a development agent with this direct
 ## Review procedure
 
 1. Start with the browser path and acceptance criteria. Inspect the models, existing migration history and checksummed lockfile. Keep sample customers fictional.
-2. Work in a separate branch for each ticket. New source or measurement settings need fixture coverage for missing data, duplicate work and provider failure. Permission changes need tests in two independent workspaces.
+2. Check the working tree before choosing a branch or worktree. Current local changes may be part of the running product. New source or measurement settings need fixture coverage for missing data, duplicate work and provider failure. Permission changes need tests in two independent workspaces.
 3. Build the Docker image, run `bin/verify` and exercise the changed feature through Rails. Test worker changes with an offline queue and a restart. Validate on PostgreSQL 18 for Render compatibility and 19 for local use when introducing database-specific SQL.
-4. Deliver a reviewable commit with the test result, actual runtime versions and remaining acceptance dependencies. Capture real provider charges, publication and production edits only with the relevant authorisation.
+4. Report the tested owner-facing path, test results and remaining acceptance dependencies. Capture real provider charges, publication and production edits only with the relevant authorisation.
 
-Runtime and release notes are in [dependency verification](dependencies.md). Installed prompt recipes, privacy boundaries and receipt semantics are in [server-side skills](skills.md). Local acceptance evidence is in [verification](verification.md).
+Runtime and release notes are in [dependency verification](dependencies.md). Installed prompt recipes, privacy boundaries and receipt semantics are in [server-side skills](skills.md). The [acceptance log](verification.md) dates each verification run. Use the running app for today's customer and release state.

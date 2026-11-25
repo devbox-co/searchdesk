@@ -33,6 +33,7 @@ module LocalFalcon
       end
       scans = pages("listLocalFalconScanReports", {placeId: @place, platform: "google", fieldmask: SCAN_MASK,
         startDate: (@today - 31).strftime("%m/%d/%Y"), endDate: @today.strftime("%m/%d/%Y")}).filter_map { |row| scan(row) }
+      grids = read_grids(scans)
       campaigns = pages("listLocalFalconCampaignReports", {placeId: @place, fieldmask: CAMPAIGN_MASK}).filter_map { |row| campaign(row) }
       gbp = nil
       if location["gbp_linked"] == true || location["gbp_linked"] == "1"
@@ -45,8 +46,9 @@ module LocalFalcon
       else
         gbp_label = "Business Profile is not linked"
       end
-      { place_id: @place, verified_name: location.fetch("name"), rows: scans + campaigns + Array.wrap(gbp),
-        result: {"scans" => scans.size, "campaigns" => campaigns.size, "gbp" => gbp_label} }
+      { place_id: @place, verified_name: location.fetch("name"), rows: scans + campaigns + Array.wrap(gbp), grids: grids,
+        result: {"scans" => scans.size, "campaigns" => campaigns.size,
+          "campaign_snapshot_ids" => campaigns.pluck(:external_id), "gbp" => gbp_label} }
     rescue KeyError, TypeError, ArgumentError, NoMethodError
       raise Client::Error, "Local Falcon returned an incomplete or invalid report. Previous evidence is retained."
     end
@@ -69,6 +71,22 @@ module LocalFalcon
       raise Client::Error, "This reporting window exceeded the refresh limit."
     end
 
+    def read_grids(scans)
+      keys = scans.map { |row| row[:external_id] }
+      saved = @site.source_snapshots.where(provider: "Local Falcon", external_id: keys)
+        .where("map_grid->>'place_id' = ?", @place).pluck(:external_id).to_set
+      pending = scans.reject { |row| saved.include?(row[:external_id]) }
+        .sort_by { |row| row[:observed_on] }.reverse.first(8)
+      pending.each_with_object({}) do |row, grids|
+        report = @client.read("getLocalFalconReport", {reportKey: row[:external_id], fieldmask: ScanGrid::FIELD_MASK})
+        grid = ScanGrid.from_report(report, row, @place)
+        grids[row[:external_id]] = grid if grid
+      rescue Client::ToolError
+        # Summary-only scans remain usable while the provider has no pin details.
+        next
+      end
+    end
+
     def scan(row)
       return unless row["place_id"] == @place && row["platform"] == "google"
       key = row.fetch("report_key")
@@ -77,7 +95,7 @@ module LocalFalcon
       return unless ((@today - 31)..@today).cover?(date)
       term = row.fetch("keyword").to_s.strip
       raise ArgumentError unless term.length.between?(1,200)
-      # Keep the vendor's summary metrics only. A scan can legitimately have no observed average.
+      # A scan can legitimately have no observed average. Pinned detail is bound separately.
       grid = Integer(row.fetch("grid_size"))
       raise ArgumentError unless grid.between?(1,21)
       metrics = {place_id: @place, grid_size: grid, radius: Float(row.fetch("radius")), distance_unit: row.fetch("measurement")}

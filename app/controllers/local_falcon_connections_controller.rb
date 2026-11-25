@@ -60,7 +60,7 @@ class LocalFalconConnectionsController < ApplicationController
     accepted = current_site.with_lock do
       c = LocalFalconConnection.lock.find_by(id: connection.id, state_digest: claim, initiator_id: current_user.id)
       next false unless c&.state_expires_at&.future? && current_site.workspace.memberships.exists?(user: current_user, role: "owner")
-      c.update!(access_token: token.fetch("access_token"), refresh_token: token.fetch("refresh_token"),
+      c.update!(ai_grant_revision: SecureRandom.uuid, access_token: token.fetch("access_token"), refresh_token: token.fetch("refresh_token"),
         token_expires_at: token.fetch("expires_in").to_i.seconds.from_now, status: "connected", verified_name: nil,
         state_digest: nil, initiator_id: nil, state_expires_at: nil, last_error: nil, sync_key: nil, synced_at: nil, last_attempt_at: nil)
       true

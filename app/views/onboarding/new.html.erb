@@ -1,7 +1,7 @@
 <% content_for :title, "Set up a site" %><div class="form-page"><p class="eyebrow">Workspace setup</p><h1>Set up a site</h1><p>Choose the website and the local market where its customers search.</p><%= render "shared/errors", record: @site %>
 <%= form_with scope: :site, url: onboarding_path, class: "stack" do |f| %>
 <%= f.label :tracking_mode, "Observation source" %><%= f.select :tracking_mode, [["Manual · import observed rankings", "manual"], ["Demo · five fictional keywords and sample history", "demo"], ["DataForSEO · managed daily collection", "dataforseo"]], selected: @site&.tracking_mode.presence || "manual" %>
-<p class="hint">Demo mode can supply a sample business if fields are blank. Managed collection requires provider configuration.</p>
+<p class="hint">Choose Manual to start using free Google reports and import existing rankings. DataForSEO adds paid, scheduled local checks when your operator has enabled them. Demo supplies a sample business if you leave the fields blank. <%= link_to "Compare data sources", public_catalogue_path %>.</p>
 <%= f.label :name, "Business or site name" %><%= f.text_field :name, value: @site&.name, maxlength: 120, placeholder: "Parkside Plumbing" %>
 <%= f.label :host, "Website hostname" %><%= f.text_field :host, value: @site&.host, autocapitalize: "none", placeholder: "parkside.example" %>
 <%= f.label :location, "Search location" %><%= f.text_field :location, value: @site&.location, placeholder: "Norwich, England, United Kingdom" %>

@@ -9,10 +9,33 @@ module Tracking
     HOST = "api.dataforseo.com"
     PREFIX = "/v3/serp/google/organic"
     MAX_BYTES = 4 * 1024 * 1024
+    PREMIUM_OPERATOR = /(?:allinanchor|allintext|allintitle|allinurl|cache|define|filetype|id|inanchor|info|intext|intitle|inurl|link|site):/i
 
     def self.enabled?
       ENV["DATAFORSEO_ENABLED"] == "true" && ENV["DATAFORSEO_LOGIN"].present? && ENV["DATAFORSEO_PASSWORD"].present?
     end
+
+    def self.daily_task_limit
+      configured_limit("DATAFORSEO_DAILY_TASK_LIMIT", 100, 2000)
+    end
+
+    def self.rolling_task_limit
+      configured_limit("DATAFORSEO_31_DAY_TASK_LIMIT", daily_task_limit * 31, 62_000)
+    end
+
+    def self.series_allowed?(id)
+      configured = ENV["DATAFORSEO_ALLOWED_SERIES_IDS"]
+      return true if configured.nil?
+
+      ids = configured.split(",", -1).map(&:strip)
+      ids.all? { |value| value.match?(/\A[1-9]\d{0,18}\z/) && value.to_i <= 9_223_372_036_854_775_807 } && ids.include?(id.to_s)
+    end
+
+    def self.configured_limit(key, fallback, maximum)
+      value = Integer(ENV.fetch(key, fallback).to_s, 10, exception: false)
+      (value || 0).clamp(0, maximum)
+    end
+    private_class_method :configured_limit
 
     def locations(country)
       raise ScopeError, "Invalid country" unless country.match?(/\A[A-Z]{2}\z/)
@@ -30,8 +53,13 @@ module Tracking
 
     def submit(slot)
       config = slot.tracking_series.settings
+      keyword = config.fetch("keyword")
+      # The provider decodes percent escapes, then charges five times its rate for search operators.
+      if URI::DEFAULT_PARSER.unescape(keyword).scrub.match?(PREMIUM_OPERATOR)
+        raise Rejected, "This search operator is outside the standard-price rank collection budget"
+      end
       payload = {
-        keyword: config.fetch("keyword"), location_code: config.fetch("location_code"),
+        keyword: keyword, location_code: config.fetch("location_code"),
         language_code: config.fetch("language"), device: config.fetch("device"), os: config.fetch("os"),
         depth: 30, max_crawl_pages: 3, priority: 1, tag: tag(slot)
       }

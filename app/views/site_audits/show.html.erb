@@ -1,0 +1,64 @@
+<% content_for :title, "Site audit" %>
+<div class="audit-view">
+  <header class="rank-heading">
+    <div><p class="rank-context"><%= rank_icon_text(:globe, current_site.host, size: 14) %></p>
+      <h1>Site audit</h1><p class="rank-intro">Find pages that need attention and see how the site performs in Google Search.</p></div>
+    <% if workspace_owner? %><%= button_to site_audit_path, class: "button solid" do %><%= rank_icon_text(:search, "Run crawl") %><% end %><% end %>
+  </header>
+
+  <section class="panel audit-panel" aria-labelledby="crawl-heading">
+    <header class="audit-heading">
+      <div><p class="audit-kicker">Searchdesk crawler</p><h2 id="crawl-heading">Website crawl</h2></div>
+      <% if @audit %><span class="audit-state audit-state--<%= @audit.status %>"><%= audit_status(@audit) %></span><% end %>
+    </header>
+    <% if @audit %>
+      <p class="audit-caption"><%= @audit.finished_at ? "Finished" : (@audit.started_at ? "Started" : "Requested") %>
+        <time datetime="<%= (@audit.finished_at || @audit.started_at || @audit.created_at).iso8601 %>"><%= audit_time(@audit.finished_at || @audit.started_at || @audit.created_at) %></time></p>
+      <% if %w[queued running].include?(@audit.status) %>
+        <p role="status">The background worker is <%= @audit.status == "queued" ? "waiting to start this crawl" : "checking public URLs" %>.</p>
+        <%= link_to "Refresh crawl status", site_audit_path(run: @audit.id), class: "audit-link" %>
+      <% end %>
+      <% if @audit.failure_reason.present? %><p class="audit-message"><%= @audit.failure_reason %></p><% end %>
+      <% if (summary = @audit.report["summary"]).present? %>
+        <dl class="audit-metrics">
+          <% {"pages_checked" => "URLs checked", "html_pages" => "HTML pages", "pages_with_issues" => "URLs with findings", "redirects" => "Redirects"}.each do |key, label| %>
+            <div><dt><%= label %></dt><dd><%= summary.fetch(key, "—") %></dd></div>
+          <% end %>
+        </dl>
+        <p class="audit-caption"><%= summary.fetch("discovered_urls", "—") %> URLs discovered · <%= summary.fetch("robots_blocked", "—") %> excluded by robots.txt · <%= summary.fetch("http_errors", "—") %> HTTP errors · <%= summary.fetch("fetch_errors", "—") %> fetch failures</p>
+        <% if @audit.report["stop_reason"].present? && @audit.report["stop_reason"] != @audit.failure_reason %><p class="audit-message"><%= @audit.report["stop_reason"] %></p><% end %>
+      <% end %>
+    <% else %>
+      <p>Start a crawl to check public pages for response errors, titles, headings, descriptions and indexing directives.</p>
+      <% unless workspace_owner? %><p class="audit-caption">The workspace owner can start a crawl.</p><% end %>
+    <% end %>
+    <p class="audit-method">Searchdesk follows public links on this site, respects robots.txt and checks up to <%= SiteAudits::Crawler::PAGE_LIMIT %> URLs per crawl.</p>
+    <div class="audit-schedule">
+      <% if workspace_owner? %>
+        <%= form_with model: current_site, url: schedule_site_audit_path, method: :patch do |f| %>
+          <%= f.label :weekly_site_audit_enabled do %><%= f.check_box :weekly_site_audit_enabled %> Run a weekly crawl<% end %>
+          <%= f.submit "Save schedule", class: "button" %>
+        <% end %>
+      <% else %><p>Weekly crawls are <%= current_site.weekly_site_audit_enabled? ? "on" : "off" %>.</p><% end %>
+      <% if current_site.weekly_site_audit_enabled? %><p class="audit-caption">The background worker runs a new sample when the most recent crawl is seven days old.</p><% end %>
+    </div>
+  </section>
+
+  <% if @audit&.report&.dig("summary").present? %>
+    <%= render "findings", audit: @audit %>
+  <% end %>
+
+  <%= render "google_performance" %>
+
+  <% if @recent_audits.size > 1 %>
+    <section class="panel audit-panel" aria-labelledby="crawl-history">
+      <h2 id="crawl-history">Recent crawls</h2>
+      <ul class="audit-history">
+        <% @recent_audits.each do |audit| %><li>
+          <%= link_to audit_time(audit.created_at), site_audit_path(run: audit.id), aria: {current: (audit.id == @audit.id ? "page" : nil)} %>
+          <span><%= audit_status(audit) %></span>
+        </li><% end %>
+      </ul>
+    </section>
+  <% end %>
+</div>

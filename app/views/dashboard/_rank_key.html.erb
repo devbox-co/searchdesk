@@ -1,0 +1,10 @@
+<div class="rank-key" role="group" aria-label="Table key">
+  <span class="rank-key-group"><span class="rank-key-label">Movement</span>
+    <span class="rank-key-item rank-key-item--up"><%= rank_icon_text(:trend_up, "Up", size: 14) %></span>
+    <span class="rank-key-item rank-key-item--down"><%= rank_icon_text(:trend_down, "Down", size: 14) %></span>
+    <span class="rank-key-item"><%= rank_icon_text(:minus, "No change", size: 13) %></span>
+  </span>
+  <% if features %><span class="rank-key-group"><span class="rank-key-label">Search features</span>
+    <%= rank_feature_badge("Local pack", show_label: true) %><%= rank_feature_badge("AI Overview", show_label: true) %>
+  </span><% end %>
+</div>

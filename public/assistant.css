@@ -1,0 +1,89 @@
+.ai-layout { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(240px, 1fr); gap: 18px; align-items: start; }
+.ai-column { min-width: 0; display: grid; gap: 16px; }
+.ai-card { min-width: 0; padding: clamp(17px, 2.2vw, 26px); }
+.ai-card h2 { display: flex; align-items: baseline; gap: 8px; }
+.ai-card h2 .ui-icon { align-self: center; color: #425b8a; }
+.ai-card > p { color: var(--muted); }
+.ai-card .button { width: fit-content; }
+.ai-ask { border-top: 3px solid var(--accent); }
+.ai-brief { border-top: 3px solid #bb7426; }
+.ai-meta { font-size: .88rem; }
+.ai-guided-review { border-top: 3px solid var(--accent); }
+.ai-review-list { padding: 0; margin: 0; list-style: none; }
+.ai-review-list li { border-top: 1px solid var(--line); padding: 15px 0; overflow-wrap: anywhere; }
+.ai-review-list li:last-child { padding-bottom: 0; }
+.ai-review-list h3 { margin: 0 0 5px; font-size: 1.05rem; }
+.ai-review-list p { margin: 0 0 7px; }
+.ai-review-step { color: var(--muted); }
+.ai-review-list a { font-size: .86rem; }
+.ai-guided-questions { display: grid; justify-items: start; gap: 7px; margin: 12px 0 20px; }
+.ai-guided-questions form { max-width: 100%; margin: 0; }
+.ai-guided-questions .button { white-space: normal; text-align: left; min-height: 40px; }
+.ai-composer, .ai-form, .ai-brief-fields { display: grid; gap: 8px; }
+.ai-composer label, .ai-form > label, .ai-form legend, .ai-brief-fields label { font-weight: 650; }
+.ai-composer textarea, .ai-form textarea { resize: vertical; }
+.ai-form { margin: 18px 0 0; }
+.ai-form > label:not(:first-child), .ai-brief-fields label:not(:first-child) { margin-top: 5px; }
+.ai-form fieldset { margin: 0; padding: 3px 0 14px; min-width: 0; border: 0; border-bottom: 1px solid var(--line); }
+.ai-check { display: flex; align-items: baseline; gap: 9px; padding: 6px 0; }
+.ai-check input { width: 1.05rem; height: 1.05rem; flex-shrink: 0; margin: 0; align-self: start; margin-top: .23em; }
+.ai-form .hint, .ai-composer .hint { margin: 0 0 5px; }
+.ai-details { margin: 12px 0; }
+.ai-details summary { color: var(--link); font-weight: 600; }
+.ai-details[open] summary { margin-bottom: 8px; }
+.ai-account-facts { margin-top: 19px; }
+.ai-controls, .ai-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.ai-heading { justify-content: space-between; margin-bottom: 9px; }
+.ai-heading h2 { margin: 0; }
+.ai-controls button:disabled { opacity: .55; cursor: default; }
+.ai-history, .ai-citations { padding: 0; margin: 0; list-style: none; }
+.ai-history li { border-top: 1px solid var(--line); padding: 9px 0; }
+.ai-history li:last-child { padding-bottom: 0; }
+.ai-history small, .ai-preview small { display: block; }
+.ai-reading { max-width: 860px; }
+.ai-reading p, .ai-history a, .ai-preview li { overflow-wrap: anywhere; }
+.ai-settings { grid-template-columns: minmax(245px, .9fr) minmax(0, 1.2fr); }
+.ai-findings, .ai-preview { padding-inline-start: 1.35rem; margin: 8px 0 0; }
+.ai-findings > li, .ai-preview > li { padding-block: 8px; padding-inline-start: 3px; }
+.ai-citations { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: .85rem; color: var(--muted); }
+.brief-banner {
+  color: #fff;
+  background: radial-gradient(ellipse at 85% -55%, #7557c1 0, transparent 59%),
+    repeating-radial-gradient(ellipse at 110% 10%, transparent 0 30px, #c3baff20 31px 32px, transparent 33px 52px),
+    linear-gradient(125deg, #172543, #302769);
+}
+.brief-origin { display: inline-flex; align-items: center; gap: 7px; padding: 4px 10px; border: 1px solid #cfc6fb70; border-radius: 999px; color: #fff; background: #ffffff17; font-size: .78rem; font-weight: 700; }
+.brief-origin .ui-icon { color: #dcd0ff; }
+.brief-date { margin: 0; color: #e3e0f5; font-size: .88rem; }
+.brief-report-header { max-width: 960px; margin-bottom: clamp(18px, 3vw, 30px); padding: clamp(22px, 5vw, 46px); border-radius: 17px; }
+.brief-report-header h1 { margin: .7rem 0 .5rem; font-size: clamp(2.05rem, 5vw, 3.5rem); }
+.ai-published-brief { max-width: 960px; }
+.brief-report-findings h2 { display: flex; align-items: center; gap: 8px; margin-bottom: .75rem; }
+.brief-report-findings h2 .ui-icon { color: #4d49a1; }
+.brief-report-findings .ai-findings { display: grid; gap: 12px; padding: 0; margin: 0; list-style: none; }
+.brief-report-findings .ai-findings > li { min-width: 0; padding: clamp(16px, 3vw, 26px); border: 1px solid #dfe2ef; border-left: 3px solid #7062ba; border-radius: 12px; background: var(--paper); }
+.brief-report-findings h3 { margin: 0 0 .35rem; font-size: 1.14rem; line-height: 1.35; overflow-wrap: anywhere; }
+.brief-meaning { max-width: 68ch; margin: 0; line-height: 1.55; }
+.brief-first-action { margin: 0 0 1.4rem; padding: clamp(17px, 2.5vw, 24px); border: 1px solid #bdccec; border-radius: 12px; background: #eef3ff; }
+.brief-first-action h2 { margin: 0 0 .4rem; font-size: 1.02rem; color: #294a88; }
+.brief-first-action p { max-width: 64ch; margin: 0; font-size: 1.12rem; font-weight: 650; }
+.brief-first-action a { display: inline-block; margin-top: .45rem; padding-block: .25rem; }
+.brief-measurements { margin-top: .65rem; }
+.brief-measurements summary { width: fit-content; max-width: 100%; padding-block: .5rem; cursor: pointer; color: var(--link); font-size: .89rem; font-weight: 650; }
+.brief-measurements summary:focus-visible { outline: 2px solid var(--link); outline-offset: 3px; border-radius: 2px; }
+.brief-sources { margin: 0; padding: 0; list-style: none; }
+.brief-sources li { padding-block: .65rem; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+.brief-sources p { max-width: 72ch; margin: 0 0 .25rem; font-size: .92rem; line-height: 1.55; }
+.brief-sources a { display: inline-block; padding-block: .2rem; }
+.overview-brief .overview-brief-preview .overview-brief-takeaway { margin: 0 0 .4rem; color: var(--ink); font-size: 1.15rem; line-height: 1.35; overflow-wrap: anywhere; }
+@media (max-width: 780px) {
+  .ai-layout, .ai-settings { grid-template-columns: minmax(0,1fr); }
+}
+@media (min-width: 641px) and (max-width: 780px) {
+  .primary-nav { gap: 1px; }
+  .primary-nav a { padding-inline: 7px; }
+}
+@media (max-width: 400px) {
+  .primary-nav { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .primary-nav a { flex-direction: row; justify-content: center; align-items: center; min-height: 44px; gap: 5px; font-size: .75rem; }
+}

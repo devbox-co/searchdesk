@@ -1,0 +1,36 @@
+<section class="panel audit-panel" aria-labelledby="audit-findings">
+  <header class="audit-heading"><div><h2 id="audit-findings">Findings to review</h2></div></header>
+  <% pages = Array(audit.report["pages"]) %>
+  <% issues = Array(audit.report["issues"]) %>
+  <% if issues.any? %>
+    <div class="audit-findings">
+      <% issues.each do |issue| %><details>
+        <summary><span><%= issue.fetch("label") %></span><small><%= pluralize(issue.fetch("count"), "URL") %></small></summary>
+        <p><%= issue["advice"] %></p>
+        <ul>
+          <% pages.select { |page| Array(page["issues"]).include?(issue["code"]) }.each do |page| %><li>
+            <%= audit_page_link(page["path"], page["url"]) %>
+            <% if issue["code"] == "broken_link" && page["broken_links"].present? %>
+              <span> links to </span><%= safe_join(page["broken_links"].map { |path| audit_page_link(path) }, ", ") %>
+            <% end %>
+          </li><% end %>
+        </ul>
+      </details><% end %>
+    </div>
+  <% elsif audit.report.dig("summary", "html_pages").to_i.positive? %>
+    <p>No findings on the URLs checked in this crawl.</p>
+  <% else %><p>The crawler reached no HTML pages to assess.</p><% end %>
+  <% if pages.any? %>
+    <details class="audit-pages">
+      <summary>All checked URLs (<%= pages.size %>)</summary>
+      <div class="tablewrap" role="region" aria-label="Checked URLs" tabindex="0"><table>
+        <thead><tr><th scope="col">URL</th><th scope="col">HTTP status</th><th scope="col">Page title</th><th scope="col">H1 headings</th></tr></thead>
+        <tbody><% pages.each do |page| %><tr>
+          <th scope="row"><%= audit_page_link(page["path"], page["url"]) %></th>
+          <td><%= page["status"].presence || "No response" %></td>
+          <td><%= page["title"].presence || "—" %></td><td><%= page["h1_count"] || "—" %></td>
+        </tr><% end %></tbody>
+      </table></div>
+    </details>
+  <% end %>
+</section>

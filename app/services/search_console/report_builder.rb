@@ -8,7 +8,7 @@ module SearchConsole
 
     def call
       today = Time.current.in_time_zone("Pacific Time (US & Canada)").to_date
-      dated = rows(today - 30, today, dimensions: ["date"], rowLimit: 31)
+      dated = rows(today - 30, today, dimensions: ["date"], aggregationType: "byProperty", rowLimit: 31)
       days = dated.map { |r| Date.iso8601(r.fetch("keys").fetch(0)) }.select { |d| d >= today - 30 && d < today }
       last = days.max
       finish = last || today - 3
@@ -18,6 +18,11 @@ module SearchConsole
       result = { "source" => "Google Search Console", "property" => @property, "time_zone" => "America/Los_Angeles",
         "search_type" => "web", "data_state" => "final", "country_scope" => "All countries",
         "last_reported_day" => last&.iso8601, "current" => current, "previous" => prior }
+      result["performance_days"] = dated.filter_map do |row|
+        day = Date.iso8601(row.fetch("keys").first)
+        next unless day.between?(finish - 27, finish)
+        metrics(row).slice("clicks", "impressions").merge("date" => day.iso8601)
+      end
       @position_country = DailyPositions.country_for(@site)
       @position_terms = @site.keywords.order(:id).pluck(:phrase)
       @position_rows = []

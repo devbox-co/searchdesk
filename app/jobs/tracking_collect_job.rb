@@ -48,12 +48,22 @@ class TrackingCollectJob < ApplicationJob
       DailySlot.connection.execute("SELECT pg_advisory_xact_lock(624003017)")
       slot.lock!
       return false unless slot.task_id.nil? && slot.attempted_at.nil? && %w[held pending].include?(slot.status)
-      limit = ENV.fetch("DATAFORSEO_DAILY_TASK_LIMIT", "100").to_i.clamp(0, 2000)
-      if DailySlot.where(attempted_at: Time.current.utc.beginning_of_day..).count >= limit
+      unless Tracking::DataForSeo.series_allowed?(slot.tracking_series_id)
+        hold(slot, "This series is outside the authorized provider scope", 12.hours)
+        return false
+      end
+      now = Time.current.utc
+      if DailySlot.where(attempted_at: now.beginning_of_day..).count >= Tracking::DataForSeo.daily_task_limit
         hold(slot, "Daily provider task limit reached", 1.hour)
         return false
       end
-      slot.update!(status: "dispatching", attempted_at: Time.current, attempt_key: SecureRandom.uuid, retry_after: 3.minutes.from_now, reason: nil)
+      # A rolling 31 × 24h interval can include parts of 32 UTC calendar dates.
+      # Count every reservation, including interrupted and unconfirmed submissions.
+      if DailySlot.where("attempted_at > ?", now - 31.days).count >= Tracking::DataForSeo.rolling_task_limit
+        hold(slot, "Rolling 31-day provider task limit reached", 5.minutes)
+        return false
+      end
+      slot.update!(status: "dispatching", attempted_at: now, attempt_key: SecureRandom.uuid, retry_after: 3.minutes.from_now, reason: nil)
       true
     end
   end
@@ -67,7 +77,9 @@ class TrackingCollectJob < ApplicationJob
       series.lock!
       slot.lock!
       return unless slot.status == "dispatching" && slot.attempt_key && !slot.task_id
-      unless Tracking::DataForSeo.enabled? && site.tracking_mode == "dataforseo" && !series.paused &&
+      unless Tracking::DataForSeo.enabled? && Tracking::DataForSeo.series_allowed?(series.id) &&
+             Tracking::DataForSeo.daily_task_limit.positive? && Tracking::DataForSeo.rolling_task_limit.positive? &&
+             site.tracking_mode == "dataforseo" && !series.paused &&
              !series.archived_at && slot.day == series.date_in_zone && site.rank_location_code == series.settings["location_code"]
         slot.update!(status: "pending", attempted_at: nil, attempt_key: nil, retry_after: nil, reason: "Collection configuration changed before submission")
         return

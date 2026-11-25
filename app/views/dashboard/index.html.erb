@@ -1,34 +1,42 @@
 <% content_for :title, "Rankings" %>
-<div class="hero"><div><p class="eyebrow"><%= current_site.host %></p><h1>Daily keyword rankings</h1><% if @source == "local" %><p>Google organic · <%= current_site.location %> · <%= current_site.language %></p>
-<% elsif @source == "campaign" %><p>Semrush Position Tracking · imported campaign readings</p>
-<% else %><p>Search Console · Web search · all devices · Pacific reporting dates</p><% end %></div>
-<% if can_manage_site? %><%= link_to "Add keyword", new_keyword_path, class: "button solid" %><% end %></div>
-<nav class="source-picker segments" aria-label="Ranking source">
-  <%= link_to "Local organic rank", rankings_path(source: "local", device: @device), aria: { current: @source == "local" ? "page" : nil } %>
-  <%= link_to ["Search Console", [@country_label, "average position"].compact.join(" ")].join(" · "), rankings_path(source: "gsc"), aria: { current: @source == "gsc" ? "page" : nil } %>
-  <% if @campaign.available? %><%= link_to "Semrush campaign", rankings_path(source: "campaign"), aria: {current: @source == "campaign" ? "page" : nil} %><% end %>
-</nav>
-<p><%= link_to "Browse source evidence", source_snapshots_path %> · <%= link_to "View Google Maps coverage", local_falcon_connection_path(anchor: "maps-scans") %></p>
-<% if @source == "campaign" %><%= render "campaign_positions" %><% elsif @source == "gsc" %><%= render "positions" %><% else %>
-<div class="toolbar"><div class="segments" aria-label="Ranking device"><% %w[mobile desktop].each do |device| %><%= link_to device.capitalize, rankings_path(source: "local", device: device, day: @day), aria: {current: device == @device ? "page" : nil} %><% end %></div>
-<%= form_with url: rankings_path, method: :get, class: "date-filter" do |f| %><%= hidden_field_tag :source, "local" %><%= hidden_field_tag :device, @device %><%= f.label :day, "Observation date" %><%= f.date_field :day, value: @day, max: @today, required: true %><%= f.submit "Show", class: "button" %><% end %></div>
-<% if current_site.tracking_mode == "demo" %><p class="notice">Demo site · all keyword observations on this site are synthetic.</p><% end %>
-<% if @rows.empty? %>
-<div class="empty"><h2>Your watchlist is empty</h2><p>Add a search phrase that a customer would use to find one of your services.</p><% if can_manage_site? %><%= link_to "Add the first keyword", new_keyword_path, class: "button" %><% end %></div>
-<% else %>
-<section class="metrics" aria-label="Watchlist summary">
-  <div><span>Tracked keywords</span><strong><%= @rows.length %></strong></div>
-  <div><span>In Google's top 10</span><strong><%= @rows.count { |row| row[:rank] && row[:rank] <= 10 } %></strong></div>
-  <div><span>Open actions now</span><strong><%= link_to @open_action_count, actions_path, aria: { label: "View all #{@open_action_count} open actions for this site" } %></strong></div>
-</section>
-<div class="tablewrap" tabindex="0" role="region" aria-label="Keyword rankings"><table>
-  <thead><tr><th scope="col">Keyword</th><th scope="col">Start</th><th scope="col"><%= @day == @today ? "Today" : compact_date(@day) %></th><th scope="col">Since start</th><th scope="col">Ranking page</th></tr></thead>
-  <tbody><% @rows.each do |row| %><tr>
-    <td><%= link_to row[:keyword].phrase, keyword_path(row[:keyword], device: @device) %><% if row[:winning_url].present? %><small class="mobile-page">Ranking page · <%= ranking_page_label(row[:winning_url]) %></small><% end %></td>
-    <td><%= rank_value(row[:baseline_rank], row[:baseline]&.status, fallback: "Awaiting start") %><small><%= compact_date(row[:baseline]&.daily_slot&.day) %></small></td>
-    <td><strong><%= rank_value(row[:rank], row[:status]) %></strong><small><%= row[:status].to_s.humanize %></small><small class="mobile-movement move <%= row[:transition] %>">Since start · <%= movement_label(row) %></small><% if row[:as_of] && row[:as_of] != @day %><small>Last observed <%= compact_date(row[:as_of]) %></small><% end %></td>
-    <td><span class="move <%= row[:transition] %>"><%= movement_label(row) %></span></td>
-    <td><%= row[:winning_url].presence || "—" %></td>
-  </tr><% end %></tbody></table></div>
-<% end %>
-<% end %>
+<turbo-frame id="rankings-filters" class="rankings-view" target="_top" data-turbo-action="advance" data-filter-frame="<%= current_site.id %>">
+  <header class="rank-heading">
+    <div><p class="rank-context"><%= rank_icon_text(:globe, current_site.host, size: 14) %></p><h1>Daily keyword rankings</h1>
+      <p class="rank-intro"><%= case @source
+        when "campaign" then "Compare your imported Semrush positions with their first readings."
+        when "gsc" then "See the average position customers saw in Google Search."
+        else "Track your website’s position in the first 30 organic results in #{current_site.location}."
+        end %></p>
+    </div>
+    <% if can_manage_site? %><%= link_to new_keyword_path, class: "button solid rank-main-action" do %><%= rank_icon_text(:plus, "Add keyword") %><% end %><% end %>
+  </header>
+
+  <nav class="rank-source-tabs" id="ranking-sources" aria-label="Ranking source">
+    <%= link_to rankings_path(source: "local", device: @device, anchor: "ranking-sources"),
+      id: "ranking-source-local", data: { turbo_frame: "rankings-filters" }, aria: { label: "Local organic rank", current: @source == "local" ? "page" : nil } do %>
+      <%= ui_icon(:target, size: 16) %><span>Local <span class="rank-source-detail">organic </span>rank</span>
+    <% end %>
+    <% gsc_measure = [@country_label, "average position"].compact.join(" ") %>
+    <%= link_to rankings_path(source: "gsc", device: @device, anchor: "ranking-sources"),
+      id: "ranking-source-gsc", data: { turbo_frame: "rankings-filters" }, aria: { label: "Search Console · #{gsc_measure}", current: @source == "gsc" ? "page" : nil } do %>
+      <%= ui_icon(:search, size: 16) %><span>Search Console<span class="rank-source-detail"> · <%= gsc_measure %></span></span>
+    <% end %>
+    <% if @campaign.available? %>
+      <%= link_to rankings_path(source: "campaign", device: @device, anchor: "ranking-sources"),
+        id: "ranking-source-campaign", data: { turbo_frame: "rankings-filters" }, aria: { label: "Semrush campaign", current: @source == "campaign" ? "page" : nil } do %>
+        <%= ui_icon(:layers, size: 16) %><span>Semrush<span class="rank-source-detail"> campaign</span></span>
+      <% end %>
+    <% end %>
+  </nav>
+
+  <% if @source == "campaign" %><%= render "campaign_positions" %>
+  <% elsif @source == "gsc" %><%= render "positions" %>
+  <% else %><%= render "local_positions" %><% end %>
+
+  <div class="rank-footlinks">
+    <%= link_to rank_icon_text(:sparkles, "Ask about these rankings"), assistant_path(starter: "movement") %>
+    <%= link_to rank_icon_text(:file_text, "Browse source evidence"), source_snapshots_path %>
+    <%= link_to rank_icon_text(:map_pin, "Explore the local rank map"), dashboard_path(anchor: "local-visibility") %>
+    <%= link_to rank_icon_text(:audit, "View site audit"), site_audit_path %>
+  </div>
+</turbo-frame>

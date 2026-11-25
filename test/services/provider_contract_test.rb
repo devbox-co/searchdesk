@@ -56,4 +56,22 @@ class ProviderContractTest < ActiveSupport::TestCase
     assert_raises(Tracking::DataForSeo::ScopeError) { provider.poll(slot) }
     assert provider.requests.all? { |(method, _, _)| method == :get }
   end
+
+  test "standard organic submission limits crawling to three pages without billable extras" do
+    provider = FixtureProvider.new
+    id = SecureRandom.uuid
+    provider.fixture = {"tasks" => [{"status_code" => 20100, "id" => id}]}
+    settings = {"keyword" => "repairs", "location_code" => 123, "language" => "en", "device" => "desktop", "os" => "windows"}
+    slot = Struct.new(:tracking_series, :attempt_key).new(Struct.new(:settings).new(settings), SecureRandom.uuid)
+    assert_equal id, provider.submit(slot)
+    assert_equal [[:post, "/v3/serp/google/organic/task_post", [{
+      keyword: "repairs", location_code: 123, language_code: "en", device: "desktop", os: "windows",
+      depth: 30, max_crawl_pages: 3, priority: 1, tag: slot.attempt_key
+    }]]], provider.requests
+    ["SITE:example.test", "%73ite%3Aexample.test", "service intitle:offers"].each do |keyword|
+      settings["keyword"] = keyword
+      assert_raises(Tracking::DataForSeo::Rejected) { provider.submit(slot) }
+    end
+    assert_equal 1, provider.requests.size
+  end
 end

@@ -1,0 +1,73 @@
+<% content_for :title, "Schedules" %>
+<div class="schedule-view">
+  <header class="rank-heading schedule-page-heading">
+    <div>
+      <p class="rank-context"><%= rank_icon_text(:globe, current_site.host, size: 14) %></p>
+      <h1>Schedules</h1>
+      <p class="rank-intro">Recurring work for <%= current_site.name %>. Times are shown in <strong><%= current_site.time_zone %></strong>.</p>
+    </div>
+    <%= link_to rank_icon_text(:calendar, "Refresh status"), schedules_path, class: "button", aria: {label: "Refresh schedule status"} %>
+  </header>
+
+  <% health = @worker_health[:status] %>
+  <aside class="schedule-runtime schedule-runtime--<%= health %>" aria-label="Searchdesk worker status">
+    <%= ui_icon(:monitor, size: 21) %>
+    <div>
+      <strong><%= {online: "Background jobs online", offline: "Background processing needs attention", unknown: "Worker status unavailable"}.fetch(health) %></strong>
+      <p>
+        <% if @worker_health[:last_tick] %>Last completed background check <%= schedule_timestamp(@worker_health[:last_tick]) %>.
+        <% elsif @worker_health[:checked_at] %>Status checked <%= schedule_timestamp(@worker_health[:checked_at]) %>.<% end %>
+        <% if health == :offline %>One or more background processes have missed their check-in. Site updates may be delayed.<% end %>
+      </p>
+    </div>
+  </aside>
+
+  <% groups = @rows.group_by { |row| row.fetch(:group) } %>
+  <% {collection: "Data collection", analysis: "Analysis and audits", external: "Provider-managed schedules"}.each do |group, title| %>
+    <% next if groups[group].blank? %>
+    <section class="schedule-section" aria-labelledby="schedule-<%= group %>">
+      <h2 id="schedule-<%= group %>"><%= title %></h2>
+      <% if group == :external %><p class="schedule-caption">The provider runs these scans. Searchdesk imports their reports on its own schedule.</p><% end %>
+      <ul class="schedule-list" role="list">
+        <% groups.fetch(group).each do |row| %>
+          <li class="schedule-row" data-schedule-key="<%= row.fetch(:key) %>">
+            <div class="schedule-identity">
+              <h3><%= row.fetch(:name) %></h3>
+              <span class="schedule-pill schedule-pill--<%= row.fetch(:tone) %>"><%= row.fetch(:status) %></span>
+              <% if row[:path].present? %><%= link_to row[:link_label].presence || "View details", row[:path], class: "schedule-link", aria: {label: "#{row[:link_label].presence || 'View details'} · #{row[:name]}"} %><% end %>
+            </div>
+            <dl class="schedule-timing">
+              <div><dt>Frequency</dt><dd><%= row.fetch(:frequency) %></dd></div>
+              <div><dt>Last run</dt><dd>
+                <% if row[:last_at] %><%= schedule_timestamp(row[:last_at]) %><small><%= row[:last_label] %></small>
+                <% else %><%= row[:last_label].presence || "No run recorded" %><% end %>
+              </dd></div>
+              <div><dt><%= group == :external ? "Next scheduled run" : "Next eligible run" %></dt><dd>
+                <% if row[:next_at] %><%= schedule_timestamp(row[:next_at]) %><small><%= row[:next_label] %></small>
+                <% else %><%= row[:next_label].presence || "No scheduled run" %><% end %>
+              </dd></div>
+            </dl>
+            <% if row[:detail].present? %><p class="schedule-detail"><%= row[:detail] %></p><% end %>
+          </li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
+
+  <% if workspace_owner? && @system_checks.present? %>
+    <details class="schedule-checks">
+      <summary>Background checks</summary>
+      <p class="schedule-caption">These checks run across the installation. A completed check can find no work due for this site.</p>
+      <table>
+        <caption class="sr-only">Searchdesk background checks</caption>
+        <thead><tr><th scope="col">Check</th><th scope="col">Frequency</th><th scope="col">Last completed check</th></tr></thead>
+        <tbody>
+          <% @system_checks.each do |check| %><tr>
+            <th scope="row"><%= check.fetch(:name) %></th><td><%= check.fetch(:frequency) %></td>
+            <td><%= schedule_timestamp(check[:last_check]) || "No check recorded" %></td>
+          </tr><% end %>
+        </tbody>
+      </table>
+    </details>
+  <% end %>
+</div>

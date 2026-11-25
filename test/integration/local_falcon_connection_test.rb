@@ -77,6 +77,33 @@ class LocalFalconConnectionTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "pin refresh enriches an imported report without changing provenance or buying a scan" do
+    captured = []
+    client = Class.new(FixtureClient) do
+      define_method(:read) do |tool, args|
+        captured << [tool, args]
+        next super(tool, args) unless tool == "getLocalFalconReport" && args[:fieldmask].include?("data_points")
+        {"report_key" => FixtureClient::KEY, "keyword" => "shop", "platform" => "google", "place_id" => FixtureClient::PLACE,
+         "date" => Time.current.strftime("%m/%d/%Y"), "grid_size" => 7, "radius" => 5, "measurement" => "mi",
+         "data_points" => [{"lat" => "50.1", "lng" => "-1.2", "rank" => 1, "competitors" => ["secret"]}],
+         "image" => "https://lf-static-v2.localfalcon.com/image/#{FixtureClient::KEY}"}
+      end
+    end
+    saved = @site.source_snapshots.create!(provider: "Local Falcon", external_id: FixtureClient::KEY, observed_on: Date.current,
+      title: "Original import", scope: "Historical Google Maps scan", keyword: "shop", source_path: "pilot/report.json",
+      metrics: {grid_size: 7, top_three_pins: 12, grid_pins: 49})
+    connection = @site.create_local_falcon_connection!(refresh_token: "fixture", access_token: "a",
+      token_expires_at: 2.hours.from_now, status: "connected", place_id: FixtureClient::PLACE)
+    stub_const(LocalFalcon, :Client, client) { 2.times { LocalFalconSyncJob.perform_now(connection.id) } }
+    assert_equal "connected", connection.reload.status
+    assert_equal 1, captured.count { |tool,args| tool == "getLocalFalconReport" && args[:fieldmask].include?("data_points") }
+    assert_equal "Original import", saved.reload.title
+    assert_equal({"grid_size"=>7, "top_three_pins"=>12, "grid_pins"=>49}, saved.metrics)
+    assert_equal [{"lat"=>50.1, "lng"=>-1.2, "rank"=>1}], saved.map_grid.fetch("points")
+    assert_equal "pilot/report.json", saved.source_path
+    assert captured.all? { |tool, _| LocalFalcon::Client::READ_TOOLS.include?(tool) }
+  end
+
   test "linked Business Profile cache expires and clinic-supplied archive remains separate" do
     c = @site.create_local_falcon_connection!(refresh_token: "fixture", access_token: "a", token_expires_at: 2.hours.from_now, status: "connected")
     stub_const(LocalFalcon, :Client, FixtureClient) { LocalFalconSyncJob.perform_now(c.id) }
