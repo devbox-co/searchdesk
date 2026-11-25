@@ -17,6 +17,7 @@ class KeywordsController < ApplicationController
     @slots = scope.limit(101).to_a
     @more = @slots.pop if @slots.size > 100
     @placements = Tracking::PlacementHistory.for_slots(@slots) if @series.source == "dataforseo"
+    @placements = Tracking::PlacementHistory.for_slots(@slots) if @series.source == "dataforseo"
   rescue Date::Error
     head :bad_request
   end

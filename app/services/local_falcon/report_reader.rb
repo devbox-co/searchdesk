@@ -48,12 +48,24 @@ module LocalFalcon
       end
       { place_id: @place, verified_name: location.fetch("name"), rows: scans + campaigns + Array.wrap(gbp), grids: grids,
         result: {"scans" => scans.size, "campaigns" => campaigns.size,
-          "campaign_snapshot_ids" => campaigns.pluck(:external_id), "gbp" => gbp_label} }
+          "campaign_snapshot_ids" => campaigns.pluck(:external_id), "gbp" => gbp_label,
+          "google_cid" => google_cid(location)}.compact }
     rescue KeyError, TypeError, ArgumentError, NoMethodError
       raise Client::Error, "Local Falcon returned an incomplete or invalid report. Previous evidence is retained."
     end
 
     private
+
+    def google_cid(location)
+      cid = location["cid"].to_s
+      return cid if cid.match?(/\A[1-9]\d{0,19}\z/) && cid.to_i <= (2**64 - 1)
+
+      url = Tracking::ResultUrl.parse(location["map_link"])
+      return unless url&.scheme == "https" && url.host == "www.google.com" && url.path.start_with?("/maps/")
+      hex = url.path[%r{!1s0x[0-9a-fA-F]{1,16}:0x([0-9a-fA-F]{1,16})(?:!|\z)}, 1]
+      value = hex&.to_i(16)
+      value.to_s if value&.positive?
+    end
 
     def pages(tool, args)
       data = []

@@ -60,6 +60,13 @@
 .rank-table thead th:first-child { width:36%; }
 .rank-table thead th:nth-child(2) { width:20%; }
 .rank-table thead th:nth-child(3) { width:23%; }
+.rank-table-with-placement thead th:first-child { width:24%; }
+.rank-table-with-placement thead th:nth-child(2) { width:36%; }
+.rank-table-with-placement thead th:nth-child(3) { width:12%; }
+.rank-placement-type { font-size:.73rem; color:var(--muted); margin-inline-start:.25rem; }
+.rank-placement-comparisons { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.35rem .7rem; margin:.45rem 0 0; }
+.rank-placement-comparisons dt { color:var(--muted); font-size:.68rem; font-weight:600; }
+.rank-placement-comparisons dd { margin:.15rem 0 0; }
 .rank-table tbody tr:last-child :is(th,td) { border-bottom:0; }
 .rank-table tbody tr:hover { background:#f8fafe; }
 .rank-table tbody .rank-term { color:var(--ink); font-size:.9rem; font-weight:650; text-align:left; }
@@ -117,6 +124,7 @@
   .rankings-view .rank-table tbody :is(th,td):nth-child(n) { display:block; width:auto; min-width:0; margin:0; border:0; padding:0; }
   .rankings-view .rank-table tbody th { grid-column:1/-1; }
   .rank-table tbody td::before { content:attr(data-label); content:attr(data-label) / ""; display:block; margin-bottom:.16rem; color:var(--muted); font-size:.65rem; font-weight:600; }
+  .rankings-view .rank-table-with-placement tbody .rank-placement { grid-column:1/-1; }
   .rank-table tbody td .rank-change { font-size:.7rem; }
   .rank-table .rank-term, .rank-table td { font-size:.8rem; }
   .rankings-view .rank-table .rank-value { font-size:.9rem; }

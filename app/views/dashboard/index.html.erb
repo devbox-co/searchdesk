@@ -5,7 +5,7 @@
       <p class="rank-intro"><%= case @source
         when "campaign" then "Compare your imported Semrush positions with their first readings."
         when "gsc" then "See the average position customers saw in Google Search."
-        else "Track your website’s position in the first 30 organic results in #{current_site.location}."
+        else "Track your Google Search positions by device in #{current_site.location}."
         end %></p>
     </div>
     <% if can_manage_site? %><%= link_to new_keyword_path, class: "button solid rank-main-action" do %><%= rank_icon_text(:plus, "Add keyword") %><% end %><% end %>

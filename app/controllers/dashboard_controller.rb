@@ -8,7 +8,7 @@ class DashboardController < ApplicationController
     @campaign = Semrush::CampaignDashboard.new(site: current_site, requested_day: requested, campaign: params[:campaign])
     @source = params[:source].presence_in(%w[local gsc campaign])
     if @source.nil? || @source == "local"
-      @rows = Tracking::Dashboard.rows(site: current_site, date: @day, device: @device)
+      @rows = Tracking::Dashboard.rows(site: current_site, date: @day, device: @device, include_placement: true)
       if @source.nil? && @rows.none? { |row| row[:as_of] }
         @positions = SearchConsole::PositionDashboard.new(site: current_site, requested_day: requested)
         last_gsc = @positions.rows.filter_map { |row| row.dig(:latest, :date) }.max
