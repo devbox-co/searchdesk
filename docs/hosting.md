@@ -29,6 +29,8 @@ Northflank advertises two always-on services, two jobs and one database within i
 
 The first release restored a one-time snapshot over a private Northflank forwarding tunnel. Normal releases reuse the hosted database. Preserve the existing DataForSEO allowlist and spend caps during routine changes. A restored database also needs the original deployment secret to decrypt stored integration credentials.
 
+The existing hosted installation has `SEARCHDESK_OWNER_CONTROLLED_AI=true` in `searchdesk-runtime`. Workspace owners manage their OpenAI project keys and allowances in **Assistant → Assistant settings**. Site-level settings govern whether the daily brief runs. A connection test uses synthetic evidence and can consume API credit.
+
 ### Transactional email with Resend
 
 The live deployment uses `searchdesk.devboxtech.co.uk` as its verified sending domain. The `searchdesk-mail` runtime secret group is limited to the web service and worker. Create a sending-only key scoped to the verified domain when rotating credentials, store it in the secret group, and restart both services. Keep open and click tracking disabled for account emails. [Verified domains](https://resend.com/docs/dashboard/domains/introduction) · [Scoped API keys](https://resend.com/changelog/new-api-key-permissions) · [SMTP settings](https://resend.com/docs/send-with-smtp)
@@ -76,6 +78,6 @@ An Oracle Cloud Always Free Ampere A1 VM can run Caddy, Rails, Solid Queue and P
 ## Verify and update
 
 - Confirm that `https://YOUR_HOST/up` returns HTTP 200 from outside the host and that the HTTP URL redirects to HTTPS. Open the sign-in page, create a test account and choose a fictional Demo site. Check **Schedules** after the five-minute scheduler has run and exercise password recovery through SMTP before onboarding real users.
-- When connecting Google integrations, register `https://YOUR_HOST/search_console/callback` and `https://YOUR_HOST/analytics/callback` on the Google OAuth client. The hosted configuration disables workspace OpenAI credential entry. Start with paid provider credentials and submissions disabled.
+- When connecting Google integrations, register `https://YOUR_HOST/search_console/callback` and `https://YOUR_HOST/analytics/callback` on the Google OAuth client. For a fresh installation, start with paid provider credentials and submissions disabled.
 - For a VM update, pull the reviewed commit, rerun the build and start command, then repeat the health and worker checks. Keep the database volume and `.env` across updates.
 - Keep encrypted off-host backups of PostgreSQL and the deployment secret and verify a restore before relying on the installation for customer data.

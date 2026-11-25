@@ -26,6 +26,8 @@ The custom hostname `searchdesk.devboxtech.co.uk` returned HTTP 200 from `/up` a
 
 Google saved the two HTTPS callbacks for the custom hostname. After the `APP_HOST` update and both service restarts, hosted Rails generated recovery mail links and Search Console, Analytics and Local Falcon callbacks on that hostname. The recovery form and HTTPS health check worked. The mail link check rendered a message without sending another email.
 
+Both hosted services restarted with the OpenAI Assistant enabled. A single synthetic connection test completed through the hosted worker and the workspace connection reported Ready. The daily SEO brief remained enabled and showed its next eligible start after ranking collection.
+
 ## 24 November 2026 · Initial clean installation
 
 The production-mode Rails service ran on localhost:3038 with an empty customer database. Sign-in and /up returned HTTP 200. PostgreSQL, Puma and Solid Queue ran in separate web, database and job containers. The database stayed on the private Compose network. Docker bound the web port to loopback.
