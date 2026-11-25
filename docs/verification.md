@@ -24,6 +24,8 @@ The private GitHub repository built commit `3f07e50` for both hosted services. P
 
 The custom hostname `searchdesk.devboxtech.co.uk` returned HTTP 200 from `/up` and displayed sign-in. Signed-out dashboard requests redirected to sign-in on the same hostname. Resend verified the DNS records for the sending domain. After restarting both services, hosted Rails used Resend SMTP and the normal password reset form submitted a single request. Resend reported delivery, and the message was found in the recipient's Gmail inbox.
 
+Google saved the two HTTPS callbacks for the custom hostname. After the `APP_HOST` update and both service restarts, hosted Rails generated recovery mail links and Search Console, Analytics and Local Falcon callbacks on that hostname. The recovery form and HTTPS health check worked. The mail link check rendered a message without sending another email.
+
 ## 24 November 2026 · Initial clean installation
 
 The production-mode Rails service ran on localhost:3038 with an empty customer database. Sign-in and /up returned HTTP 200. PostgreSQL, Puma and Solid Queue ran in separate web, database and job containers. The database stayed on the private Compose network. Docker bound the web port to loopback.

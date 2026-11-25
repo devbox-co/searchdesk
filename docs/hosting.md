@@ -43,7 +43,7 @@ The live deployment uses `searchdesk.devboxtech.co.uk` as its verified sending d
 
 Verify SMTP delivery with an actual password recovery request to an account the operator controls. Confirm the message arrives and its link points to the public Searchdesk domain. Keep recovery links and SMTP credentials out of logs and support messages.
 
-The custom web hostname and Resend sender share a domain and use separate DNS records. Rails currently uses its original Northflank `APP_HOST` for generated email links and OAuth callbacks. Before changing `APP_HOST` to the custom hostname, register the matching Google callback URLs and verify a complete connection or reconnect flow.
+The custom web hostname and Resend sender share a domain and use separate DNS records. The hosted `APP_HOST` is `searchdesk.devboxtech.co.uk`, so new account emails and OAuth callbacks use that hostname. The Google OAuth client authorizes `https://searchdesk.devboxtech.co.uk/search_console/callback` and `https://searchdesk.devboxtech.co.uk/analytics/callback` alongside the localhost callback URLs. When changing the hostname again, register the new Google callbacks before updating `APP_HOST` and verify a connection or reconnect flow from the new hostname.
 
 ## Docker VM on Oracle Cloud
 
