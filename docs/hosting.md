@@ -4,12 +4,43 @@ Push the reviewed Searchdesk working tree to GitHub. A private repository can se
 
 ## Northflank Sandbox
 
-Northflank advertises two always-on services, two jobs and one database within its $20/month free resource allowance, with no card required. Searchdesk needs the two services for Puma and Solid Queue and one job for migrations. Check the available service sizes and Sandbox estimate in the dashboard before provisioning. [Northflank pricing](https://northflank.com/pricing)
+Northflank advertises two always-on services, two jobs and one database within its $20/month free resource allowance. During setup, the Sandbox dashboard required card verification to provision PostgreSQL and sign into the CLI. Searchdesk uses the two services for Puma and Solid Queue. Allow one manual job for subsequent migrations. Check available service sizes and the Sandbox estimate in the dashboard before provisioning. [Northflank pricing](https://northflank.com/pricing)
 
 1. Connect the GitHub repository and create a project on Northflank Cloud. Create a private PostgreSQL 18 addon with TLS. Link the addon's `POSTGRES_URI` into a project secret group with the alias `DATABASE_URL`. Set one persistent `SECRET_KEY_BASE` generated with `openssl rand -hex 64`. Share the group with the web service, worker and migration job. Set `APP_PROTOCOL=https`, `DATAFORSEO_ENABLED=false` and `SEARCHDESK_OWNER_CONTROLLED_AI=false` in the same group. [PostgreSQL and secret-group setup](https://northflank.com/docs/v1/application/databases-and-persistence/deploy-databases-on-northflank/deploy-postgresql-on-northflank)
 2. Create a manual job that builds the root `Dockerfile` from the GitHub repository. Set its command to `bin/rails db:prepare`. Run it on the commit you plan to deploy and check that it exits successfully. [Manual jobs](https://northflank.com/docs/v1/application/run/run-an-image-once-or-on-a-schedule)
 3. Create two combined services that build the same commit. For the web service, keep the default Puma command, expose HTTP port 3000 publicly and set the HTTP health check to `/up`. Copy its generated public hostname into `APP_HOST` in the secret group without the scheme or path. For the worker, set the command to `bin/worker` and remove any automatically detected public port. Disable continuous deployment for both services so you can run the migration job on each new commit before rolling that commit out. [Build and deploy](https://northflank.com/docs/v1/application/getting-started/build-and-deploy-your-code) · [Public ports](https://northflank.com/docs/v1/application/network/configure-ports) · [Command overrides](https://northflank.com/docs/v1/application/run/override-command-entrypoint)
 4. Add `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` and `MAIL_FROM` to the secret group, and verify delivery from the hosted worker. Follow the verification checks below.
+
+### Redeploy the existing Northflank installation
+
+| Setting | Current deployment |
+| --- | --- |
+| Source | Private `devbox-co/searchdesk` repository, branch `main`, root `Dockerfile` |
+| Northflank | `shehbazs-team` → `default` project in Europe West |
+| Web | `searchdesk-web`, one replica, default Puma command, public HTTP port 3000, readiness at `/up` |
+| Worker | `searchdesk-worker`, one replica, command `bin/worker`, no public port |
+| Database | `searchdesk-db`, private PostgreSQL 18 with TLS |
+| Secrets | `searchdesk-runtime`, scoped to the web and worker, with the database connection linked as `DATABASE_URL` |
+
+1. From the Searchdesk repository root, run `git status --short --branch` and inspect the full set of intended changes. Run `bin/verify` against the isolated local test database. Stage and commit only the intended release. The hosted database is the working copy for customer data. Keep the local worker stopped while the hosted worker owns scheduled syncs and paid checks.
+2. Keep the current `SECRET_KEY_BASE` and database addon across every rollout. Use `nf login` to sign into the existing team if needed. Check both services in Northflank. When deploying a schema change, disable automatic deployment on both services before pushing the commit. Build that commit and run `bin/rails db:prepare` as a manual job using the new image and the same database. Add the job to the runtime secret group's restrictions for the migration. Check the job exit status before deploying the same commit to both services. Plan any migration incompatible with the current image as a maintenance window.
+3. Check the deployed commit and service health. Verify the public URL over HTTPS and confirm the scheduler heartbeat in **Schedules**. Use the secret group's restart action after changing runtime settings. Check that both services inherited the updated settings. [Northflank CLI](https://northflank.com/docs/v1/api/use-the-cli) · [Secret groups](https://northflank.com/docs/v1/application/secure/manage-secret-groups)
+
+The first release restored a one-time snapshot over a private Northflank forwarding tunnel. Normal releases reuse the hosted database. Preserve the existing DataForSEO allowlist and spend caps during routine changes. A restored database also needs the original deployment secret to decrypt stored integration credentials.
+
+### Transactional email with Resend
+
+Resend supports the app's existing SMTP settings. Verify a dedicated sending subdomain in Resend, keep open and click tracking disabled for that subdomain, and create a sending-only key scoped to it. Add these variables to `searchdesk-runtime` and restart both services. Keep the key in the secret group. [Verified domains](https://resend.com/docs/dashboard/domains/introduction) · [Scoped API keys](https://resend.com/changelog/new-api-key-permissions) · [SMTP settings](https://resend.com/docs/send-with-smtp)
+
+| Variable | Value |
+| --- | --- |
+| `SMTP_HOST` | `smtp.resend.com` |
+| `SMTP_PORT` | `2587` (STARTTLS) |
+| `SMTP_USER` | `resend` |
+| `SMTP_PASSWORD` | Domain-scoped Resend sending key |
+| `MAIL_FROM` | `Searchdesk <accounts@YOUR_VERIFIED_SENDING_SUBDOMAIN>` |
+
+Verify SMTP delivery with an actual password recovery request to an account the operator controls. Confirm the message arrives and its link points to the public Searchdesk domain. Keep recovery links and SMTP credentials out of logs and support messages.
 
 ## Docker VM on Oracle Cloud
 

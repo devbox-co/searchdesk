@@ -18,6 +18,10 @@ For a later task, check the running installation's [integrations](http://localho
 
 `bin/verify` passed Rails eager loading and 192 tests with 2,174 assertions and zero failures, errors or skips. An isolated Compose stack prepared a fresh PostgreSQL database, returned HTTP 200 from `/up` and rendered sign-in through Caddy over locally trusted HTTPS. HTTP redirected to HTTPS. Solid Queue registered its worker and scheduler. The public DNS, certificate and SMTP checks require a hosted instance.
 
+## 25 November 2026 · Northflank Sandbox
+
+The private GitHub repository built commit `3f07e50` for both hosted services. PostgreSQL 18 accepted the one-time database restore through Northflank's private tunnel over verified TLS. Hosted Rails had no pending migrations and could decrypt all four migrated integration credentials. The public HTTPS endpoint returned HTTP 200 from `/up` and rendered sign-in. A signed-out dashboard request redirected to sign-in. The hosted worker, dispatcher and scheduler reported current heartbeats. DataForSEO used the approved existing allowlist and caps, and the local worker was stopped for cutover. SMTP delivery requires a mail provider.
+
 ## 24 November 2026 · Initial clean installation
 
 The production-mode Rails service ran on localhost:3038 with an empty customer database. Sign-in and /up returned HTTP 200. PostgreSQL, Puma and Solid Queue ran in separate web, database and job containers. The database stayed on the private Compose network. Docker bound the web port to loopback.
