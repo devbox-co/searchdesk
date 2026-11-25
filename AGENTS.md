@@ -4,9 +4,10 @@ Searchdesk is a Rails application for small-business owners. The owner chooses a
 
 ## Start a new task
 
-1. Open the folder containing this file. On the owner's Mac it is `$HOME/Documents/ChatGPT/Searchdesk`. Run `git rev-parse --show-toplevel` and `git status --short --branch`. On 25 November 2026 the working copy on `main` contained modified and untracked features and had no configured Git remote. Use the current working files as the starting point. A fresh checkout of that commit omits those features.
-2. Find the feature, its code and its acceptance tests in the [development handoff](docs/HANDOFF.md). Follow the requested task. The handoff also contains candidate future work.
-3. For the local installation, sign in with the existing Searchdesk account. **Integrations** shows the selected site's connections and data coverage. **Schedules** shows frequency, last result, next eligibility and worker health. These screens are the source for today's settings. [Dashboard](http://localhost:3038/dashboard) · [Integrations](http://localhost:3038/integrations) · [Schedules](http://localhost:3038/schedules)
+1. Open the folder containing this file. On the owner's Mac it is `$HOME/Documents/ChatGPT/Searchdesk`. Run `git rev-parse --show-toplevel` and `git status --short --branch`. Check whether this task depends on any uncommitted work.
+2. Create a fresh `codex/<task-slug>` branch for every new task before editing files. Start from the appropriate committed base, usually `origin/main`. If another task is using the checkout, create your branch in a separate Git worktree to give each task its own working files and index. Bring over only the uncommitted changes your task needs.
+3. Find the feature, its code and its acceptance tests in the [development handoff](docs/HANDOFF.md). Follow the requested task. The handoff also contains candidate future work.
+4. For the local installation, sign in with the existing Searchdesk account. **Integrations** shows the selected site's connections and data coverage. **Schedules** shows frequency, last result, next eligibility and worker health. These screens are the source for today's settings. [Dashboard](http://localhost:3038/dashboard) · [Integrations](http://localhost:3038/integrations) · [Schedules](http://localhost:3038/schedules)
 
 ## Run and verify
 
