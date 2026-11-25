@@ -3,7 +3,7 @@
   <%= link_to rank_icon_text(:arrow_left, "Rankings"), rankings_path(source: "local", device: @device), class: "rank-back" %>
   <header class="rank-heading"><div>
     <p class="rank-context"><%= rank_icon_text(:target, "Keyword history", size: 14) %></p><h1><%= @keyword.phrase %></h1>
-    <p class="rank-intro"><%= current_site.location %> · Google organic · <%= current_site.language %> · first 30 results</p>
+    <p class="rank-intro"><%= current_site.location %> · Google · <%= current_site.language %> · top 30 organic results checked</p>
   </div><% if current_site.tracking_mode == "manual" && can_manage_site? %>
     <%= link_to rank_icon_text(:plus, "Import observation"), new_keyword_rank_import_path(@keyword, device: @device), class: "button solid" %>
   <% end %></header>
@@ -40,19 +40,21 @@
       </div>
     <% else %><%= render "dashboard/rank_key", features: false %>
       <div class="rank-table-shell" tabindex="0" role="region" aria-label="Past observations">
-      <table role="table" class="rank-table rank-history-table"><thead role="rowgroup"><tr role="row"><th role="columnheader" scope="col">Observation date</th><th role="columnheader" scope="col">Position</th><th role="columnheader" scope="col">Since start</th><th role="columnheader" scope="col">Status</th></tr></thead><tbody role="rowgroup">
+      <table role="table" class="rank-table rank-history-table<%= ' rank-table-with-placement' if @placements %>"><thead role="rowgroup"><tr role="row"><th role="columnheader" scope="col">Observation date</th><% if @placements %><th role="columnheader" scope="col">Best result on Google</th><% end %><th role="columnheader" scope="col">Organic rank</th><th role="columnheader" scope="col">Organic movement</th><th role="columnheader" scope="col">Status</th></tr></thead><tbody role="rowgroup">
         <% @slots.each do |slot| %><% obs = slot.rank_observation
           baseline = @series.baseline_observation
           baseline = nil if baseline && baseline.day > slot.day
           change = if baseline&.position && obs&.position && baseline.day < slot.day
             baseline.position - obs.position
           end
-          transition = Tracking::Dashboard.transition(baseline, obs, change) %>
+          transition = Tracking::Dashboard.transition(baseline, obs, change)
+          placement = @placements&.[](slot.id) %>
           <tr role="row"><th role="rowheader" scope="row" class="rank-term"><%= compact_date(slot.day) %>
               <% if obs %><small><%= obs.captured_at.in_time_zone(current_site.time_zone).strftime("%H:%M %Z") %></small><% end %>
-              <% if obs&.winning_url.present? %><span class="rank-sub">Ranking page · <%= rank_page_link(obs.winning_url) %></span><% end %></th>
-            <td role="cell" data-label="Position"><strong class="rank-value"><%= rank_value(obs&.position, obs&.status) %></strong></td>
-            <td role="cell" data-label="Since start"><%= rank_change_badge(transition, movement_label(transition: transition, change: change)) %></td>
+              <% if obs&.winning_url.present? && placement&.dig(:current, "type") != "organic" %><span class="rank-sub">Ranking page · <%= rank_page_link(obs.winning_url) %></span><% end %></th>
+            <% if @placements %><td role="cell" data-label="Best result on Google" class="rank-placement"><%= render "dashboard/google_placement", placement: placement %></td><% end %>
+            <td role="cell" data-label="Organic rank"><strong class="rank-value"><%= rank_value(obs&.position, obs&.status) %></strong></td>
+            <td role="cell" data-label="Organic movement"><%= rank_change_badge(transition, movement_label(transition: transition, change: change)) %></td>
             <td role="cell" data-label="Status"><%= (obs&.status || slot.status).humanize %><% if slot.reason.present? %><small><%= slot.reason %></small><% end %></td>
           </tr>
         <% end %></tbody>

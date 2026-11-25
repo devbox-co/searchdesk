@@ -1,6 +1,6 @@
 module Tracking
   class Dashboard
-    def self.rows(site:, date:, device:)
+    def self.rows(site:, date:, device:, include_placement: false)
       day = date.to_date
       scope = TrackingSeries.joins(:keyword).where(keywords: { site_id: site.id })
       scope = scope.where(device: device) if device.present? && device != "all"
@@ -10,6 +10,7 @@ module Tracking
           .max_by { |s| [s.enrolled_on, s.id] } || versions.find { |s| s.archived_at.nil? }
       end
       slots = DailySlot.where(tracking_series_id: series_list.map(&:id), day: day).includes(:rank_observation).index_by(&:tracking_series_id)
+      placements = include_placement ? PlacementHistory.for_slots(slots.values) : {}
       last_dates = DailySlot.where(tracking_series_id: series_list.map(&:id), status: %w[ranked outside]).where(day: ..day).group(:tracking_series_id).maximum(:day)
       series_list.map do |series|
         slot = slots[series.id]
@@ -25,7 +26,7 @@ module Tracking
         { keyword: series.keyword, series: series, slot: slot, observation: result, baseline: baseline,
           rank: result&.position, baseline_rank: baseline&.position, change: change, transition: comparison,
           status: status, winning_url: result&.winning_url, actions: series.keyword_actions.select { |a| a.status == "open" && a.observed_on <= day },
-          as_of: last_dates[series.id] }
+          as_of: last_dates[series.id], placement: placements[slot&.id] }
       end
     end
 
