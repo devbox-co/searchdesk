@@ -18,6 +18,7 @@ Northflank advertises two always-on services, two jobs and one database within i
 | Source | Private `devbox-co/searchdesk` repository, branch `main`, root `Dockerfile` |
 | Northflank | `shehbazs-team` → `default` project in Europe West |
 | Web | `searchdesk-web`, one replica, default Puma command, public HTTP port 3000, readiness at `/up` |
+| Public hostname | `searchdesk.devboxtech.co.uk`, verified in Northflank and linked to port `http` |
 | Worker | `searchdesk-worker`, one replica, command `bin/worker`, no public port |
 | Database | `searchdesk-db`, private PostgreSQL 18 with TLS |
 | Secrets | `searchdesk-runtime`, scoped to the web and worker, with the database connection linked as `DATABASE_URL` |
@@ -30,7 +31,7 @@ The first release restored a one-time snapshot over a private Northflank forward
 
 ### Transactional email with Resend
 
-Resend supports the app's existing SMTP settings. Verify a dedicated sending subdomain in Resend, keep open and click tracking disabled for that subdomain, and create a sending-only key scoped to it. Add these variables to `searchdesk-runtime` and restart both services. Keep the key in the secret group. [Verified domains](https://resend.com/docs/dashboard/domains/introduction) · [Scoped API keys](https://resend.com/changelog/new-api-key-permissions) · [SMTP settings](https://resend.com/docs/send-with-smtp)
+The live deployment uses `searchdesk.devboxtech.co.uk` as its verified sending domain. The `searchdesk-mail` runtime secret group is limited to the web service and worker. Create a sending-only key scoped to the verified domain when rotating credentials, store it in the secret group, and restart both services. Keep open and click tracking disabled for account emails. [Verified domains](https://resend.com/docs/dashboard/domains/introduction) · [Scoped API keys](https://resend.com/changelog/new-api-key-permissions) · [SMTP settings](https://resend.com/docs/send-with-smtp)
 
 | Variable | Value |
 | --- | --- |
@@ -38,9 +39,11 @@ Resend supports the app's existing SMTP settings. Verify a dedicated sending sub
 | `SMTP_PORT` | `2587` (STARTTLS) |
 | `SMTP_USER` | `resend` |
 | `SMTP_PASSWORD` | Domain-scoped Resend sending key |
-| `MAIL_FROM` | `Searchdesk <accounts@YOUR_VERIFIED_SENDING_SUBDOMAIN>` |
+| `MAIL_FROM` | `accounts@searchdesk.devboxtech.co.uk` |
 
 Verify SMTP delivery with an actual password recovery request to an account the operator controls. Confirm the message arrives and its link points to the public Searchdesk domain. Keep recovery links and SMTP credentials out of logs and support messages.
+
+The custom web hostname and Resend sender share a domain and use separate DNS records. Rails currently uses its original Northflank `APP_HOST` for generated email links and OAuth callbacks. Before changing `APP_HOST` to the custom hostname, register the matching Google callback URLs and verify a complete connection or reconnect flow.
 
 ## Docker VM on Oracle Cloud
 

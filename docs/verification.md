@@ -22,6 +22,8 @@ For a later task, check the running installation's [integrations](http://localho
 
 The private GitHub repository built commit `3f07e50` for both hosted services. PostgreSQL 18 accepted the one-time database restore through Northflank's private tunnel over verified TLS. Hosted Rails had no pending migrations and could decrypt all four migrated integration credentials. The public HTTPS endpoint returned HTTP 200 from `/up` and rendered sign-in. A signed-out dashboard request redirected to sign-in. The hosted worker, dispatcher and scheduler reported current heartbeats. DataForSEO used the approved existing allowlist and caps, and the local worker was stopped for cutover. SMTP delivery requires a mail provider.
 
+The custom hostname `searchdesk.devboxtech.co.uk` returned HTTP 200 from `/up` and displayed sign-in. Signed-out dashboard requests redirected to sign-in on the same hostname. Resend verified the DNS records for the sending domain. After restarting both services, hosted Rails used Resend SMTP and the normal password reset form submitted a single request. Resend reported delivery, and the message was found in the recipient's Gmail inbox.
+
 ## 24 November 2026 · Initial clean installation
 
 The production-mode Rails service ran on localhost:3038 with an empty customer database. Sign-in and /up returned HTTP 200. PostgreSQL, Puma and Solid Queue ran in separate web, database and job containers. The database stayed on the private Compose network. Docker bound the web port to loopback.
