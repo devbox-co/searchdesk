@@ -38,6 +38,14 @@ class GooglePlacementTest < ActionDispatch::IntegrationTest
         assert_select "[title='Up 4']"
         assert_select "small", text: "#{(first + 7).strftime('%d %b %Y')} · #6"
       end
+      assert_select "#tracking_series_#{@desktop.id} .rank-watchlist-organic small", text: "Started at #3 · #{first.strftime('%d %b %Y')}"
+      get rankings_path(source: "local", device: "desktop", day: first + 7)
+      assert_select "#tracking_series_#{@desktop.id} .rank-placement" do
+        assert_select "dt", count: 1, text: "Since last check and start"
+        assert_select ".rank-placement-comparisons .rank-change", text: "Up 1", count: 1
+        assert_select ".rank-placement-comparisons small", text: "#{first.strftime('%d %b %Y')} · #7", count: 1
+      end
+
       get keyword_path(@keyword, device: "desktop", range: "7")
       assert_select ".rank-placement [title='Up 4']"
       assert_select ".rank-placement", text: "No comparable result"

@@ -32,28 +32,30 @@ class KeywordControlsTest < ActionDispatch::IntegrationTest
     assert_nil @keyword.reload.preferred_page_on(Date.tomorrow)
   end
 
-  test "rankings and keyword device links keep the selected day or history range in their own frame" do
+  test "rankings and keyword history default to desktop and preserve an explicit mobile selection" do
     day = Date.yesterday.iso8601
     get rankings_path(source: "local", day: day)
-    desktop_link = css_select("#local-rank-desktop").sole
-    assert_equal rankings_path(source: "local", day: day, device: "desktop", anchor: "ranking-devices"), desktop_link["href"]
-    get desktop_link["href"], headers: {"Turbo-Frame" => desktop_link["data-turbo-frame"]}
+    assert_select "#ranking-devices > #local-rank-desktop:first-child[aria-current=page]"
+    mobile_link = css_select("#local-rank-mobile").sole
+    assert_equal rankings_path(source: "local", day: day, device: "mobile", anchor: "ranking-devices"), mobile_link["href"]
+    get mobile_link["href"], headers: {"Turbo-Frame" => mobile_link["data-turbo-frame"]}
     assert_select "turbo-frame#rankings-filters[target=_top][data-turbo-action=advance][data-filter-frame=?]", @site.id.to_s do
-      assert_select "#local-rank-desktop[aria-current=page]"
+      assert_select "#local-rank-mobile[aria-current=page]"
       assert_select "input[name=day][value=?]", day
-      assert_select "#ranking-source-gsc[data-turbo-frame=rankings-filters][href=?]", rankings_path(source: "gsc", device: "desktop", anchor: "ranking-sources")
-      assert_select ".rank-term a[href=?]", keyword_path(@keyword, device: "desktop")
+      assert_select "#ranking-source-gsc[data-turbo-frame=rankings-filters][href=?]", rankings_path(source: "gsc", device: "mobile", anchor: "ranking-sources")
+      assert_select ".rank-term a[href=?]", keyword_path(@keyword, device: "mobile")
     end
 
     get keyword_path(@keyword, range: "all", before: day)
-    desktop_link = css_select("#keyword-rank-desktop").sole
-    assert_equal keyword_path(@keyword, device: "desktop", range: "all", before: day, anchor: "keyword-devices"), desktop_link["href"]
-    get desktop_link["href"], headers: {"Turbo-Frame" => desktop_link["data-turbo-frame"]}
+    assert_select "#keyword-devices > #keyword-rank-desktop:first-child[aria-current=page]"
+    mobile_link = css_select("#keyword-rank-mobile").sole
+    assert_equal keyword_path(@keyword, device: "mobile", range: "all", before: day, anchor: "keyword-devices"), mobile_link["href"]
+    get mobile_link["href"], headers: {"Turbo-Frame" => mobile_link["data-turbo-frame"]}
     assert_select "turbo-frame#keyword-filters[target=_top][data-turbo-action=advance][data-filter-frame=?]", @site.id.to_s do
-      assert_select "#keyword-rank-desktop[aria-current=page]"
+      assert_select "#keyword-rank-mobile[aria-current=page]"
       assert_select "#keyword-range-all[aria-current=page]"
-      assert_select "#keyword-range-7[data-turbo-frame=keyword-filters][href=?]", keyword_path(@keyword, device: "desktop", range: "7", anchor: "keyword-periods")
-      assert_select "input[name=device][value=desktop]"
+      assert_select "#keyword-range-7[data-turbo-frame=keyword-filters][href=?]", keyword_path(@keyword, device: "mobile", range: "7", anchor: "keyword-periods")
+      assert_select "input[name=device][value=mobile]"
     end
   end
 end

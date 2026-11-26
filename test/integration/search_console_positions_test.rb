@@ -106,6 +106,7 @@ class SearchConsolePositionsTest < ActionDispatch::IntegrationTest
       "items" => [{"type" => "organic", "rank_group" => 1, "url" => "https://example.test/heating"}]))
     get rankings_path
     assert_select "nav[aria-label='Ranking source'] a[aria-current=page]", text: "Local organic rank"
+    assert_select "#local-rank-desktop[aria-current=page]"
     patch market_search_console_path, params: {country: "gb"}
     assert_redirected_to search_console_path
     assert_equal "GBR", SearchConsole::DailyPositions.country_for(@site.reload)

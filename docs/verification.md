@@ -1,5 +1,9 @@
 # Local acceptance history
 
+## 25 November 2026 · Ranking row redesign
+
+Rails eager loading and 196 tests passed with 2,256 assertions. A fictional-site preview verified Overview → Rankings → keyword history and checked the Rankings layout at 1280 and 390 pixels. The shared comparison appeared once when both dates matched. Different reference dates stayed visible for the local-pack winner. Chrome confirmed a visible keyboard focus indicator, device changes and Back navigation without horizontal overflow at phone width. The desktop-first follow-up passed the same 196 tests with 2,262 assertions. Chrome confirmed Desktop opens first and the Mobile selection carries into keyword history.
+
 ## 25 November 2026 · Guided client setup
 
 The isolated guide build passed Rails eager loading and 193 tests with 2,212 assertions. In Chrome at 1280 and 390 pixels, fictional accounts followed sign-up, site creation, the guide, first keyword entry and Finish setup through to Overview. Email verification and Search Console settings linked back to the guide. The phone workspace menu reopened completed setup and the guide fit within the viewport. Integration tests verified resume on sign-in and rejection of a different site's form and viewer access. The shared working-tree suite reported four ranking-label failures from separate ranking changes.

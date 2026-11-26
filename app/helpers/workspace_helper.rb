@@ -39,7 +39,7 @@ module WorkspaceHelper
       class: "rank-feature rank-feature--#{style}#{" rank-feature--icon" if compact}", title: feature)
   end
 
-  def rank_change_badge(state, label)
+  def rank_change_badge(state, label, show_direction: false)
     tone, icon = case state.to_s
     when "up", "entered" then ["up", :trend_up]
     when "down", "left" then ["down", :trend_down]
@@ -47,7 +47,7 @@ module WorkspaceHelper
     when "unchanged", "outside_both" then ["same", :minus]
     else ["unknown", nil]
     end
-    content = if %w[up down].include?(state.to_s)
+    content = if %w[up down].include?(state.to_s) && !show_direction
       direction, magnitude = label.split(" ", 2)
       safe_join([ui_icon(icon, size: 15), tag.span("#{direction} ", class: "rank-sr-only"), tag.span(magnitude)])
     elsif icon

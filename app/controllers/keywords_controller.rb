@@ -3,7 +3,7 @@ class KeywordsController < ApplicationController
 
   def show
     @keyword = current_site.keywords.find(params[:id])
-    @device = params[:device] == "desktop" ? "desktop" : "mobile"
+    @device = params[:device] == "mobile" ? "mobile" : "desktop"
     @series = @keyword.tracking_series.current.find_by(device: @device)
     @range = %w[7 30 all].include?(params[:range]) ? params[:range] : "30"
     @slots = []
