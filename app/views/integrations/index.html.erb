@@ -1,0 +1,35 @@
+<% content_for :title, "Integrations" %>
+<div class="hero integration-hero">
+  <div><p class="eyebrow"><%= current_site.name %></p><h1>Integrations</h1>
+    <p>Find the right source for your rankings, website traffic and local listings.</p></div>
+  <%= link_to "Browse source evidence", source_snapshots_path, class: "button" %>
+</div>
+<nav class="integration-sections" aria-label="Integration sections">
+  <%= link_to "Coverage guide", @show_guide ? "#source-guide" : integrations_path(anchor: "source-guide") %>
+  <%= link_to "All services", "#services" %>
+</nav>
+<%= render "coverage" if @show_guide %>
+
+<section id="services" class="integration-directory" aria-labelledby="services-heading">
+  <h2 id="services-heading">Service directory</h2>
+  <%= form_with url: integrations_path(anchor: "services"), method: :get, class: "filter integration-filter" do |f| %>
+    <label>Find a service <%= search_field_tag :q, params[:q], placeholder: "Name or measurement" %></label>
+    <label>Show <%= select_tag :filter, options_for_select([["All integrations",""],["Needs attention","attention"]],params[:filter]) %></label>
+    <%= f.submit "Filter", class: "button" %><span><%= @entries.size %> of <%= IntegrationCatalogue::ROWS.size %> services</span>
+  <% end %>
+  <% if @entries.empty? %><p class="empty">No matching integrations. <%= link_to "Clear filters", integrations_path(anchor: "services") %></p><% end %>
+  <%= render "service_cards", entries: @available if @available.any? %>
+  <% if @planned.any? %>
+    <details class="integration-planned" <%= "open" if params[:q].present? %>>
+      <summary>Planned services (<%= @planned.size %>)</summary>
+      <%= render "service_cards", entries: @planned %>
+    </details>
+  <% end %>
+</section>
+<p class="notice integration-worker" role="status">
+  <strong><%= @automation_online ? "Background jobs are running." : "Background jobs have not checked in recently." %></strong>
+  <% if current_site.tracking_mode == "manual" %>Local organic ranks update when you import a reading. Connected reporting sources refresh on their schedules while the host is running.
+  <% elsif current_site.tracking_mode == "demo" %>The local rank watchlist shows fictional examples. Connected reporting sources follow their own schedules.
+  <% else %>Managed local rank checks and connected reporting sources follow their schedules while the host is running.<% end %>
+  <%= link_to "View schedules and last runs", schedules_path %>
+</p>

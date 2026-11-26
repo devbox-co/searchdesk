@@ -1,0 +1,35 @@
+<% content_for :title, @entry.name %><div class="form-page"><%= link_to "← Integrations", integrations_path, class: "back" %><p class="eyebrow"><%= @entry.group %></p>
+<% state = integration_state(@entry) %>
+<h1><%= @entry.name %></h1><p><%= @entry.description %></p><dl class="facts">
+<dt>Site</dt><dd><%= current_site.host %></dd><dt>Access method</dt><dd><%= state[:mode] || @entry.mode %></dd><dt>Status</dt><dd><%= state[:label] %></dd></dl>
+<%= render "imported_reports", state: state %>
+<% if @entry.key == "openai" %>
+  <p><%= state[:detail] %>. Questions and daily briefs use the workspace allowance.</p>
+  <div class="buttons"><% if workspace_owner? %><%= link_to "OpenAI settings", assistant_settings_path, class: "button solid" %><% end %><%= link_to "Open assistant", assistant_path, class: "button" %></div>
+<% elsif %w[google-search-console google-analytics].include?(@entry.key) %>
+  <% google_name, destination = @entry.key == "google-search-console" ? ["Search Console", search_console_path] : ["Google Analytics", analytics_path] %>
+  <% verb = workspace_owner? ? {absent: "Set up", choose_property: "Finish setting up", reconnect: "Reconnect"}.fetch(state[:phase], "Manage") : "View" %>
+  <p><%= state[:detail] %></p><%= link_to "#{verb} #{google_name}", destination, class: "button solid" %>
+<% elsif @entry.key == "google-business-profile" %>
+  <p><%= state[:detail] %></p>
+  <% if state[:report] %><%= link_to "View reported interactions", source_snapshot_path(state[:report]), class: "button solid" %><% end %>
+  <%= link_to "Open Business Profile manager ↗", IntegrationCatalogue::PORTALS.fetch(@entry.key), target: "_blank", rel: "noopener noreferrer", class: "button" %>
+<% elsif @entry.key == "semrush" %>
+  <p><%= state[:detail] %>. Use a campaign you already run, then import new dated reports as needed. Campaign positions can include Local Pack and AI Overview results.</p>
+  <p><%= link_to "View campaign rankings", rankings_path(source: "campaign"), class: "button" %></p>
+  <% if can_manage_site? %><%= link_to "Import a report", new_project_import_path, class: "button" %><% end %>
+  <p><%= link_to "How Semrush counts campaign positions ↗", "https://www.semrush.com/kb/549-position-tracking-overview-manual", target: "_blank", rel: "noopener noreferrer" %></p>
+<% elsif @entry.key == "local-falcon" %>
+  <p><%= link_to "View Local Falcon sync", local_falcon_connection_path, class: "button solid" %></p>
+  <% if @report_link.persisted? && @report_link.valid? %><p><%= link_to "Open saved report ↗", @report_link.url, target: "_blank", rel: "noopener noreferrer", class: "button" %></p><p class="muted">Saved <%= compact_date(@report_link.updated_at) %>. Data stays with Local Falcon.</p><% end %>
+  <% if can_manage_site? %><%= render "shared/errors", record: @report_link %>
+    <%= form_with scope: :site_report_link, url: integration_path(@entry.key), method: :patch, class: "stack" do |f| %><%= f.label :url, "Shared report URL" %><%= f.url_field :url, value: @report_link.url, required: true, maxlength: 512, placeholder: "https://app.localfalcon.com/reports/view/REPORT_ID" %><%= f.submit "Save report link", class: "button solid" %><% end %>
+    <% if @report_link.persisted? %><%= button_to "Remove saved link", integration_path(@entry.key), method: :patch, params: {remove: "1"}, class: "text-button" %><% end %>
+  <% end %>
+<% elsif @entry.key == "rank-import" %><p>Choose a keyword in the watchlist, then open its import screen on a manual site.</p><%= link_to "Open local organic ranks", rankings_path(source: "local"), class: "button" %>
+<% elsif @entry.key == "dataforseo" %><p><%= state[:detail] %></p><p>Searchdesk counts organic results in order and records your highest matching page. Use this paid measurement when your existing campaign or free Search Console averages do not answer the town-and-device question.</p>
+  <%= link_to "View local organic ranks", rankings_path(source: "local"), class: "button" %>
+  <p><%= link_to "How DataForSEO labels result positions ↗", "https://docs.dataforseo.com/v3/serp/google/organic/task_get/advanced/", target: "_blank", rel: "noopener noreferrer" %></p>
+<% elsif (url = IntegrationCatalogue::PORTALS[@entry.key]) %><%= link_to "Open provider ↗", url, target: "_blank", rel: "noopener noreferrer", class: "button" %>
+<% elsif @entry.key == "website" %><%= link_to "Open website ↗", "https://#{current_site.host}/", target: "_blank", rel: "noopener noreferrer", class: "button" %>
+<% else %><p class="notice">This adapter is planned. Account credentials are not collected.</p><% end %></div>

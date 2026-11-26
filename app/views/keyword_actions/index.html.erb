@@ -1,0 +1,50 @@
+<% content_for :title, "Actions" %>
+<div class="hero"><div><p class="eyebrow"><%= current_site.name %></p><h1>Actions</h1><p>Review the work your team has prioritised and the changes suggested by keyword readings.</p></div><%= link_to assistant_path(starter: "priority"), class: "button" do %><%= ui_icon(:sparkles) %> Ask about these actions<% end %></div>
+<% if @task_counts.present? %>
+  <section class="project-actions" aria-labelledby="project-work-heading">
+    <h2 id="project-work-heading"><%= ui_icon(:tasks) %> Project tasks</h2>
+    <p><strong><%= @task_counts.slice(*ProjectTask::ACTIONABLE_STATES).values.sum %> actionable</strong> of <%= link_to pluralize(@task_counts.values.sum, "project task"), project_tasks_path %>. <%= link_to "Jump to keyword recommendations", "#keyword-recommendations" %></p>
+    <ul class="task-statuses" aria-label="Project tasks by current status">
+      <% @task_counts.sort.each do |status, count| %>
+        <li><%= link_to "#{status.humanize} · #{count}", project_tasks_path(status: status) %></li>
+      <% end %>
+    </ul>
+    <% if @priority_tasks.any? %>
+      <h3>Priority tasks</h3>
+      <ul class="priority-tasks"><% @priority_tasks.each do |task| %>
+        <li class="card"><%= link_to task.title, project_task_path(task) %>
+          <small><%= ui_icon(:flag, size: 13) %> <%= task.priority.humanize %> priority · <%= task.effective_status.humanize %></small>
+        </li>
+      <% end %></ul>
+    <% end %>
+  </section>
+<% else %>
+  <p><%= link_to "Open project tasks", project_tasks_path %></p>
+<% end %>
+<h2 id="keyword-recommendations"><%= ui_icon(:target) %> Keyword recommendations</h2>
+<% if workspace_owner? %><p><%= link_to "Business wording preferences", wording_setting_path %></p><% end %>
+<%= form_with url: actions_path, method: :get, class: "filter" do |f| %>
+<label>Keyword <%= select_tag :keyword_id, options_for_select([["All keywords",""]]+@keywords.map { |k| [k.phrase,k.id] }, @keyword&.id) %></label>
+<label>Status <%= select_tag :state, options_for_select([["Open","open"],["Reviewed","resolved"]], @state) %></label><%= f.submit "Filter", class: "button" %>
+<% end %>
+<% if @actions.empty? %><div class="empty"><h3>No <%= @state == "open" ? "open" : "reviewed" %> keyword recommendations in this view</h3><p>Recommendations appear when comparable readings and evidence meet a rule's requirements.</p></div><% end %>
+<% @actions.each do |item| %><article id="<%= dom_id(item) %>" class="card action">
+  <p class="eyebrow"><%= link_to item.keyword.phrase, keyword_path(item.keyword, device: item.tracking_series.device) %> · <%= item.tracking_series.device.capitalize %> · <%= compact_date(item.observed_on) %></p>
+  <h2><%= item.title %></h2><p><%= item.description %></p>
+  <% if item.evidence.present? %>
+    <details class="guide"><summary>Evidence</summary>
+      <dl class="facts">
+        <dt>Source</dt><dd><%= {"demo" => "Simulated demo observation", "dataforseo" => "DataForSEO", "manual" => "Manual import"}.fetch(item.evidence["source"], item.evidence["source"].to_s.humanize) %></dd>
+        <dt>Observed</dt><dd><%= compact_date(item.observed_on) %> · <%= item.tracking_series.device.capitalize %></dd>
+        <dt>Position</dt><dd><%= item.evidence["position"] ? "##{item.evidence['position']}" : "No exact reading" %></dd>
+        <dt>Ranking page</dt><dd><%= item.evidence["winning_url"].presence || "Not recorded" %></dd>
+        <dt>Preferred page</dt><dd><%= item.evidence["preferred_url"].presence || "Unassigned" %></dd>
+      </dl>
+      <details><summary>Technical record</summary><pre><%= JSON.pretty_generate(item.evidence) %></pre></details>
+    </details>
+  <% end %>
+  <% if can_manage_site? %><div class="buttons">
+    <% if item.status == "open" %><%= button_to "Preview action", action_draft_path(item), method: :post, class: "button" %><% end %>
+    <%= button_to item.status == "open" ? "Mark reviewed" : "Reopen", action_path(item), method: :patch, params: {status: item.status == "open" ? "resolved" : "open"}, class: "button" %>
+  </div><% end %>
+</article><% end %>

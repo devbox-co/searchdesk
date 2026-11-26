@@ -1,0 +1,64 @@
+<% content_for :title, "Setup guide" %>
+<div class="form-page setup-guide">
+  <h1>Set up <%= current_site.name %></h1>
+  <p>Add a search phrase to start your watchlist. Connect the reporting sources you already use when you’re ready.</p>
+
+  <ol class="setup-steps" aria-label="Getting started">
+    <li>
+      <div class="setup-step">
+        <div><h2>Website added</h2><p><%= current_site.host %> · <%= current_site.location %></p></div>
+        <span class="setup-status">Complete</span>
+      </div>
+    </li>
+    <li aria-current="<%= @first_keyword ? nil : "step" %>">
+      <div class="setup-step">
+        <div><h2>Add your first keyword</h2><p>Choose a phrase a customer might search for, such as your service and town.</p></div>
+        <% if @first_keyword %>
+          <span class="setup-status">Complete</span>
+        <% else %>
+          <%= link_to "Add a keyword", new_keyword_path(setup: 1), class: "button solid" %>
+        <% end %>
+      </div>
+    </li>
+  </ol>
+
+  <section class="setup-options" aria-labelledby="setup-options-title">
+    <h2 id="setup-options-title">Optional setup</h2>
+    <ul>
+      <li class="setup-step">
+        <div><h3>Verify your email</h3><p>Confirm your address so other workspaces can add you as a member.</p></div>
+        <% if current_user.email_verified_at %>
+          <span class="setup-status">Verified</span>
+        <% else %>
+          <%= link_to "Verify email", new_email_verification_path, class: "button" %>
+        <% end %>
+      </li>
+      <% if workspace_owner? %>
+        <% if GoogleReadOnly::Client.configured? %>
+          <%= render "connection_step", name: "Google Search Console", description: "See which searches bring people to your website.",
+            path: search_console_path, connected: current_site.search_console_connection&.status == "connected" && current_site.search_console_connection.property.present? %>
+          <%= render "connection_step", name: "Google Analytics 4", description: "See what visitors do after they find your site.",
+            path: analytics_path, connected: current_site.analytics_connection&.status == "connected" && current_site.analytics_connection.property_id.present? %>
+        <% end %>
+        <%= render "connection_step", name: "Local Falcon", description: "Bring in Google Maps scans from an existing Local Falcon account.",
+          path: local_falcon_connection_path, connected: current_site.local_falcon_connection&.status == "connected" %>
+      <% end %>
+      <% if @first_keyword && current_site.tracking_mode == "manual" %>
+        <li class="setup-step">
+          <div><h3>Import a ranking</h3><p>Add a saved search result to start tracking changes in position.</p></div>
+          <%= link_to "Import a ranking", new_keyword_rank_import_path(@first_keyword), class: "button" %>
+        </li>
+      <% end %>
+    </ul>
+  </section>
+
+  <div class="setup-actions">
+    <% if current_site.setup_tour_pending? %>
+      <%= button_to(@first_keyword ? "Finish setup" : "Go to Overview for now", setup_guide_path, method: :patch,
+        params: { site_id: current_site.id }, class: @first_keyword ? "button solid" : "button") %>
+    <% else %>
+      <%= link_to "Go to Overview", dashboard_path, class: "button" %>
+    <% end %>
+    <small>You can return anytime from the workspace menu.</small>
+  </div>
+</div>

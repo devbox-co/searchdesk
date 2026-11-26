@@ -1,0 +1,9 @@
+<% if playbooks.any? %>
+  <p class="ai-meta">Choose a question to run an analysis with your workspace’s OpenAI allowance.<% if parent %> It will review site data for <%= compact_date(@review_day) %>.<% end %></p>
+  <div class="ai-guided-questions" role="group" aria-label="Suggested questions">
+    <% playbooks.each do |playbook| %>
+      <%= button_to playbook.question, assistant_questions_path, method: :post, class: "button",
+        params: {playbook: playbook.key, request_key: SecureRandom.uuid, parent_id: parent&.id}.compact %>
+    <% end %>
+  </div>
+<% end %>

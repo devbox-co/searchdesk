@@ -1,0 +1,13 @@
+#!/bin/sh
+set -eu
+# The managed worker can start before the web service finishes its migration.
+attempt=0
+until bin/rails runner 'pool = ActiveRecord::Base.connection_pool; exit(pool.with_connection { |db| db.table_exists?(:solid_queue_processes) } && !pool.migration_context.needs_migration? ? 0 : 1)'; do
+  attempt=$((attempt + 1))
+  if [ "$attempt" -ge 60 ]; then
+    echo "Database migrations are still pending. Check the web service migration logs." >&2
+    exit 1
+  fi
+  sleep 5
+done
+exec bin/jobs

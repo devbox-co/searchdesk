@@ -1,0 +1,55 @@
+.audit-view { min-width: 0; }
+.audit-panel, .audit-home { margin-bottom: 1rem; min-width: 0; }
+.audit-heading { display: flex; justify-content: space-between; align-items: center; gap: .75rem 1rem; flex-wrap: wrap; }
+.audit-heading h2, .audit-subsection h3 { margin: 0; }
+.audit-kicker { color: var(--muted); font-size: .77rem; font-weight: 680; letter-spacing: .015em; margin: 0 0 .18rem; }
+.audit-caption, .audit-method { color: var(--muted); font-size: .85rem; line-height: 1.5; }
+.audit-caption { overflow-wrap: anywhere; }
+.audit-method { margin-bottom: 0; border-top: 1px solid var(--line); padding-top: .85rem; }
+.audit-link, .audit-subsection a { display: inline-flex; align-items: center; gap: .4rem; font-weight: 630; }
+.audit-state { display: inline-flex; align-items: center; gap: .38rem; padding: .32rem .65rem; border-radius: 1rem; background: #eaf0fc; color: #244484; font-size: .82rem; font-weight: 700; }
+.audit-state--partial { color: #754512; background: #fff0d4; }
+.audit-state--failed { color: #8d3330; background: #fbe9e8; }
+.audit-metrics { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: .6rem; margin: 1rem 0; }
+.audit-metrics > div { min-width: 0; padding: .85rem .95rem; border: 1px solid var(--line); border-radius: .65rem; }
+.audit-metrics dt, .audit-sitemap dt { color: var(--muted); font-size: .82rem; font-weight: 600; }
+.audit-metrics dd, .audit-sitemap dd { margin: .3rem 0 0; font-variant-numeric: tabular-nums; font-size: clamp(1.15rem, 2.3vw, 1.65rem); line-height: 1.2; font-weight: 720; letter-spacing: -.035em; overflow-wrap: anywhere; }
+.audit-metrics .audit-prior { font-size: .78rem; color: var(--muted); letter-spacing: normal; font-weight: 550; margin-top: .45rem; }
+.audit-metrics--compact { grid-template-columns: repeat(3, minmax(0,1fr)); margin-bottom: 0; }
+.audit-metrics--compact > div { background: var(--washed); border: 0; }
+.audit-findings details { border-bottom: 1px solid var(--line); }
+.audit-findings summary, .audit-pages > summary { padding: .8rem .1rem; cursor: pointer; font-weight: 660; color: var(--link); }
+.audit-findings summary span { margin-right: .5rem; }
+.audit-findings summary small { color: var(--muted); font-weight: 550; white-space: nowrap; }
+.audit-findings p { margin: .15rem 0; }
+.audit-findings ul { padding-left: 1.6rem; }
+.audit-findings a, .audit-pages th, .audit-pages td { overflow-wrap: anywhere; }
+.audit-pages { margin-top: .65rem; }
+.audit-pages .tablewrap { margin-top: .4rem; }
+.audit-pages th[scope=row] { text-align: left; }
+.audit-subsection { margin-top: 1.2rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+.audit-subsection h3 { font-size: 1.05rem; }
+.audit-subsection > :last-child { margin-bottom: 0; }
+.audit-sitemap { display: flex; flex-wrap: wrap; gap: .8rem 2rem; margin: .8rem 0; }
+.audit-sitemap dd { font-size: 1.18rem; }
+.audit-message { border-left: .2rem solid #ca8741; padding: .35rem .7rem; }
+.audit-history { margin: 0; list-style: none; padding: 0; }
+.audit-history li { display: flex; justify-content: space-between; gap: .8rem; padding: .6rem 0; border-bottom: 1px solid var(--line); }
+.audit-history li:last-child { border-bottom: 0; }
+.audit-history span { color: var(--muted); }
+@media (max-width: 720px) {
+  .audit-metrics { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .audit-metrics--compact { grid-template-columns: repeat(3, minmax(0,1fr)); }
+}
+@media (max-width: 450px) {
+  .audit-metrics { gap: .4rem; }
+  .audit-metrics > div { padding: .7rem; }
+  .audit-metrics--compact > div { padding: .55rem; }
+  .audit-metrics--compact dt { font-size: .74rem; }
+}
+.audit-schedule { border-top: 1px solid var(--line); margin-top: .9rem; padding-top: .8rem; }
+.audit-schedule form, .audit-schedule label { display: flex; align-items: center; flex-wrap: wrap; gap: .65rem; }
+.audit-schedule form { gap: .8rem 1.25rem; }
+.audit-schedule label { width: auto; margin: 0; }
+.audit-schedule input[type=checkbox] { width: 1rem; height: 1rem; margin: 0; }
+.audit-schedule p { margin: .6rem 0 0; }

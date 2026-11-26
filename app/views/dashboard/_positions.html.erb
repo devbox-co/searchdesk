@@ -1,0 +1,47 @@
+<% if @positions.country.blank? %>
+  <div class="empty rank-empty"><h2>Choose a reporting country</h2><p>A country keeps your daily comparisons consistent.</p><%= link_to "Search Console settings", search_console_path, class: "button" %></div>
+<% elsif !@positions.available? && @positions.cutoff.blank? %>
+  <div class="empty rank-empty"><h2>Waiting for Search Console evidence</h2><p>Connect a verified property or import dated daily reports for the exact phrases and selected country.</p><%= link_to "Search Console settings", search_console_path, class: "button" %></div>
+<% else %>
+  <% rows = @positions.rows
+     dated = rows.filter_map { |r| r[:current] }
+     positioned = dated.count { |r| r[:position] }
+     impressions = dated.filter_map { |r| r[:impressions] } %>
+  <%= render "rank_stats", cards: [
+    {icon: :list, label: "Tracked keywords", value: rows.length, detail: "#{@country_label || @positions.country} · all devices"},
+    {icon: :search, label: "With a position", value: (dated.empty? ? "—" : positioned), detail: "Keywords with impressions on this date"},
+    {icon: :globe, label: "Reported impressions", value: (impressions.empty? ? "—" : number_with_delimiter(impressions.sum)), detail: "Across the returned watchlist rows"}] %>
+  <section class="rank-panel">
+    <div class="rank-panel-header"><div><h2>Search Console positions</h2><p><%= @positions.property %> · <%= @country_label || @positions.country %> · Google Web · all devices</p></div>
+      <%= form_with url: rankings_path, method: :get, class: "rank-controls" do |f| %>
+        <%= hidden_field_tag :source, "gsc" %><%= f.label :day, "Pacific report date" %>
+        <div><%= f.date_field :day, value: @day, max: @today, required: true %><%= f.submit "Show", class: "button" %></div>
+      <% end %>
+    </div>
+    <div class="rank-availability"><span><%= rank_icon_text(:calendar, "Available through #{compact_date(@positions.cutoff) || 'an unknown day'} Pacific") %></span><%= link_to "Latest available", rankings_path(source: "gsc") %></div>
+    <% if rows.empty? %><div class="empty rank-empty"><h2>No tracked keywords</h2><p>Add the customer searches you want to follow.</p></div>
+    <% else %>
+      <%= render "dashboard/rank_key", features: false %>
+    <div class="rank-table-shell" tabindex="0" role="region" aria-label="Search Console daily positions">
+        <table role="table" class="rank-table"><thead role="rowgroup"><tr role="row"><th role="columnheader" scope="col">Keyword</th><th role="columnheader" scope="col">First reported</th><th role="columnheader" scope="col"><%= compact_date(@day) %></th><th role="columnheader" scope="col">Change</th></tr></thead>
+          <tbody role="rowgroup"><% rows.each do |row| %><% first, current = row.values_at(:baseline, :current) %><tr role="row">
+            <th role="rowheader" scope="row" class="rank-term"><%= link_to row[:keyword].phrase, source_snapshots_path(provider: "gsc", keyword: row[:keyword].phrase) %></th>
+            <td role="cell" data-label="First reported"><% if first %><span class="rank-value"><%= number_with_precision(first[:position], precision: 2, strip_insignificant_zeros: true) %></span><small><%= link_to compact_date(first[:date]), source_snapshot_path(first[:record]), aria: {label: "Open starting Search Console evidence for #{row[:keyword].phrase} on #{compact_date(first[:date])}"} %></small><% else %><span class="rank-unmeasured">No baseline</span><% end %></td>
+            <td role="cell" data-label="<%= compact_date(@day) %>"><% if current&.dig(:position) %><% value = number_with_precision(current[:position], precision: 2, strip_insignificant_zeros: true) %>
+                <strong class="rank-value"><%= link_to value, source_snapshot_path(current[:record]), aria: {label: "Average position #{value} for #{row[:keyword].phrase} on #{compact_date(@day)}. Open Search Console evidence"} %></strong>
+                <small><%= pluralize(current[:impressions], "impression") %> · <%= current[:clicks].nil? ? "Clicks unavailable" : pluralize(current[:clicks], "click") %></small>
+              <% elsif current && current[:impressions] == 0 %><%= link_to "No impressions", source_snapshot_path(current[:record]), class: "rank-unmeasured", aria: {label: "No impressions for #{row[:keyword].phrase} on #{compact_date(@day)}. Open Search Console evidence"} %>
+              <% elsif @positions.cutoff && @day > @positions.cutoff %><span class="rank-unmeasured">Pending report</span>
+              <% else %><span class="rank-unmeasured">No reported position</span><% end %>
+              <% if !current&.dig(:position) && row[:latest] %><small>Last observed <%= link_to compact_date(row[:latest][:date]), source_snapshot_path(row[:latest][:record]) %></small><% end %>
+            </td><td role="cell" data-label="Change"><%= gsc_position_change(row) %></td>
+          </tr><% end %></tbody>
+        </table>
+      </div>
+    <% end %>
+    <details class="rank-guide"><summary><%= rank_icon_text(:info, "How average position is measured") %></summary>
+      <p>Google averages the position of the property’s highest result across eligible impressions. Each keyword’s baseline is its earliest comparable day with impressions. Low-volume queries may be omitted. Days beyond the latest final report are pending.</p>
+      <% if @positions.records.any? { |record| record.metrics["source_basis"] == "complete_ui_report" } %><p>Historical imports identify the exact queries and complete reporting dates. Those exports did not expose the API aggregation or final-data settings. New API readings request final, property-level data.</p><% end %>
+    </details>
+  </section>
+<% end %>

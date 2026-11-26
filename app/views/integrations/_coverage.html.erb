@@ -1,0 +1,58 @@
+<section class="integration-coverage" aria-labelledby="coverage-heading" id="source-guide">
+  <div class="coverage-heading">
+    <h2 id="coverage-heading">Choose a source by goal</h2>
+  </div>
+  <%= render "source_choices", heading: "For this site", site: current_site %>
+
+  <article class="coverage-local" data-coverage="local" aria-labelledby="local-coverage-heading">
+    <header><h3 id="local-coverage-heading"><%= ui_icon(:target, size: 19) %> Where do my keywords rank locally?</h3>
+      <p>Two sources can track the same phrase. Each keeps its own baseline.</p></header>
+    <div class="coverage-options">
+      <section class="coverage-option">
+        <h4>Existing Semrush campaign</h4>
+        <p>Compare imported campaign positions for the same market and device. A position can include a Local Pack or AI Overview result.</p>
+        <% if @campaign %>
+          <small>Imported through <%= compact_date(@campaign[:cutoff]) %> · <%= @campaign[:location] %> · <%= @campaign[:device].capitalize %></small>
+          <%= link_to "View campaign positions", rankings_path(source: "campaign", campaign: @campaign[:key]) %>
+        <% else %>
+          <small>No matching campaign imported for the watchlist.</small>
+          <%= link_to "See Semrush imports", integration_path("semrush") %>
+        <% end %>
+      </section>
+      <section class="coverage-option">
+        <h4>Local organic results only</h4>
+        <p>Use DataForSEO for a scheduled top-30 sample in your town on each tracked device. Manual sites can import a matching observation.</p>
+        <% if current_site.tracking_mode == "demo" %><small>Fictional sample readings for this demo site.</small>
+        <% else %><small><%= current_site.tracking_mode == "manual" ? "Manual import" : "DataForSEO · #{integration_state("dataforseo")[:label]}" %> · <%= @last_local_day ? "latest reading #{compact_date(@last_local_day)}" : "no complete reading yet" %></small><% end %>
+        <div class="coverage-links"><%= link_to "View local organic ranks", rankings_path(source: "local") %>
+          <%= link_to "About DataForSEO", integration_path("dataforseo") unless current_site.tracking_mode == "dataforseo" %></div>
+      </section>
+    </div>
+  </article>
+
+  <div class="coverage-other">
+    <%= render "coverage_google", key: "google-search-console", heading: "Which searches find my website?",
+        description: "Search Console reports clicks, impressions and average position. Watchlist averages cover searches across devices in the selected country.",
+        destination: search_console_path, action: "Open Search Console" %>
+    <%= render "coverage_google", key: "google-analytics", heading: "What happens after the click?",
+        description: "GA4 shows sessions from Google organic search and key events on your website. Verify which events represent genuine enquiries.",
+        destination: analytics_path, action: "Open Google Analytics" %>
+    <% falcon = integration_state("local-falcon") %>
+    <article class="coverage-item" data-coverage="maps"><h3><%= ui_icon(:map_pin, size: 19) %> Where do I appear on Maps?</h3>
+      <p>Local Falcon samples a keyword at multiple map points. Searchdesk reads existing grids and campaign schedules.</p>
+      <small><%= falcon[:label] %><% if @latest_grid %> · Latest saved grid <%= compact_date(@latest_grid.observed_on) %><% elsif falcon[:phase] == :connected %> · No saved grid for this site<% elsif falcon[:phase] == :link %> · External report only<% end %></small>
+      <% if @latest_grid || falcon[:phase] == :connected %><%= link_to "View Maps reports", local_falcon_connection_path %>
+      <% else %><%= link_to "Explore Local Falcon", integration_path("local-falcon") %><% end %>
+    </article>
+    <% profile = integration_state("google-business-profile") %>
+    <article class="coverage-item" data-coverage="profile"><h3><%= ui_icon(:actions, size: 19) %> Do customers act on my listing?</h3>
+      <p>Read call clicks, website clicks and direction requests in the free Business Profile manager. An existing linked Local Falcon account can bring them here.</p>
+      <small><%= profile[:label] %><% if profile[:report] %> · <%= profile[:detail].delete_prefix("Reported period · ") %><% end %></small>
+      <% if profile[:report] %>
+        <%= link_to "View listing interactions", source_snapshot_path(profile[:report]) %>
+      <% else %>
+        <%= link_to "View Business Profile options", integration_path("google-business-profile") %>
+      <% end %>
+    </article>
+  </div>
+</section>

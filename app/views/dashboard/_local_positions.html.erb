@@ -1,0 +1,74 @@
+<% if current_site.tracking_mode == "demo" %><p class="rank-note notice"><%= ui_icon(:info) %><span>Demo site · all keyword observations on this site are synthetic.</span></p><% end %>
+<% if @rows.empty? %>
+  <div class="empty rank-empty"><h2>Your watchlist is empty</h2><p>Add a phrase your customers would use to find a service.</p>
+    <% if can_manage_site? %><%= link_to "Add the first keyword", new_keyword_path, class: "button" %><% end %></div>
+<% else %>
+  <% measured = @rows.count { |r| r[:rank].present? || r[:status] == "outside" } %>
+  <%= render "rank_stats", cards: [
+    {icon: :list, label: "Tracked keywords", value: @rows.length, detail: "#{@device.capitalize} watchlist"},
+    {icon: :target, label: "In Google's organic top 10", value: (measured.positive? ? @rows.count { |r| r[:rank] && r[:rank] <= 10 } : "—"), detail: "#{pluralize(measured, 'complete reading')} on this date"},
+    {icon: :flag, label: "Open actions now", value: link_to(@open_action_count, actions_path, aria: {label: "View all #{@open_action_count} open actions for this site"}), detail: "Across this site’s keywords"}] %>
+<% end %>
+<section class="rank-panel">
+  <div class="rank-panel-header">
+    <div><h2>Local Google positions</h2><p><%= current_site.location %> · Google · <%= current_site.language %> · top 30 organic results checked</p></div>
+    <%= form_with url: rankings_path, method: :get, class: "rank-controls" do |f| %>
+      <%= hidden_field_tag :source, "local" %><%= hidden_field_tag :device, @device %>
+      <%= f.label :day, "Observation date" %>
+      <div><%= f.date_field :day, value: @day, max: @today, required: true %><%= f.submit "Show", class: "button" %></div>
+    <% end %>
+  </div>
+  <nav class="rank-device-tabs" id="ranking-devices" aria-label="Ranking device"><% %w[desktop mobile].each do |device| %>
+    <%= link_to rank_icon_text(device == "mobile" ? :smartphone : :monitor, device.capitalize), rankings_path(source: "local", device: device, day: @day, anchor: "ranking-devices"),
+      id: "local-rank-#{device}", data: { turbo_frame: "rankings-filters" }, aria: {current: device == @device ? "page" : nil} %>
+  <% end %></nav>
+  <% if @rows.any? %>
+    <% show_placement = @rows.any? { |row| row[:series].source == "dataforseo" } %>
+    <%= render "dashboard/rank_key", features: false %>
+    <div class="rank-table-shell" tabindex="0" role="region" aria-label="Keyword rankings">
+      <table role="table" class="rank-table rank-watchlist<%= ' rank-watchlist--placement' if show_placement %>">
+        <thead role="rowgroup">
+          <tr role="row">
+            <th role="columnheader" scope="col">Keyword</th>
+            <% if show_placement %><th role="columnheader" scope="col">Best result on Google</th><% end %>
+            <th role="columnheader" scope="col">Organic rank</th>
+          </tr>
+        </thead>
+        <tbody role="rowgroup">
+          <% @rows.each do |row| %>
+            <tr id="<%= dom_id(row[:series]) %>" role="row">
+              <th role="rowheader" scope="row" class="rank-term">
+                <%= link_to row[:keyword].phrase, keyword_path(row[:keyword], device: @device) %>
+              </th>
+              <% if show_placement %>
+                <td role="cell" data-label="Best result on Google" class="rank-placement">
+                  <%= render "dashboard/google_placement", placement: row[:placement] %>
+                </td>
+              <% end %>
+              <td role="cell" data-label="Organic rank" class="rank-watchlist-organic">
+                <div class="rank-watchlist-reading">
+                  <strong class="<%= row[:rank] ? 'rank-value' : 'rank-unmeasured' %>"><%= rank_value(row[:rank], row[:status]) %></strong>
+                  <% unless row[:transition] == :unavailable %>
+                    <%= rank_change_badge(row[:transition], movement_label(row), show_direction: true) %>
+                  <% end %>
+                </div>
+                <% unless %w[ranked outside].include?(row[:status]) %><small><%= row[:status].to_s.humanize %></small><% end %>
+                <% if row[:winning_url].present? && row.dig(:placement, :current, "type") != "organic" %>
+                  <small><%= rank_page_link(row[:winning_url]) %></small>
+                <% end %>
+                <% if row[:baseline] %>
+                  <small>Started at <%= rank_value(row[:baseline_rank], row[:baseline].status) %> · <%= compact_date(row[:baseline].day) %></small>
+                <% end %>
+                <% if row[:as_of] && row[:as_of] != @day %><small>Last observed <%= compact_date(row[:as_of]) %></small><% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+  <details class="rank-guide"><summary><%= rank_icon_text(:info, "How Google positions are measured") %></summary>
+    <p>Organic rank counts regular website results. Its movement is measured from the first comparable reading. “Outside 30” means a complete organic check found no result for this site in the first 30.</p>
+    <% if show_placement %><p>Best result on Google uses the result’s position in the full search results. It can be a website link or a verified business listing in the local pack. The comparisons use the last and first readings with the same location, device, method and profile. Missing or insufficient evidence has no comparable position.</p><% end %>
+  </details>
+</section>

@@ -1,0 +1,18 @@
+<section class="panel audit-home" aria-labelledby="home-audit-heading">
+  <header class="audit-heading">
+    <div><p class="audit-kicker">Technical SEO</p><h2 id="home-audit-heading">Site audit</h2></div>
+    <%= link_to rank_icon_text(:arrow_right, "Open site audit"), site_audit_path, class: "audit-link" %>
+  </header>
+  <% if audit %>
+    <p class="audit-caption"><%= audit_status(audit) %> · <%= audit_time(audit.finished_at || audit.started_at || audit.created_at) %></p>
+    <% if (summary = audit.report["summary"]).present? %>
+      <dl class="audit-metrics audit-metrics--compact">
+        <% {"pages_checked" => "URLs checked", "html_pages" => "HTML pages", "pages_with_issues" => "URLs with findings"}.each do |key, label| %>
+          <div><dt><%= label %></dt><dd><%= summary.fetch(key, "—") %></dd></div>
+        <% end %>
+      </dl>
+    <% elsif audit.failure_reason.present? %><p><%= audit.failure_reason %></p><% end %>
+  <% else %>
+    <p class="audit-caption">Review page titles, links and crawl issues alongside this site's Google Search Console results.</p>
+  <% end %>
+</section>

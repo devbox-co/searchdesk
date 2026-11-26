@@ -1,0 +1,38 @@
+databases:
+  - name: seo-workspace-db
+    postgresMajorVersion: "18"
+    databaseName: seo_workspace
+    plan: 0.1c-256mb
+    ipAllowList: []
+services:
+  - type: web
+    name: seo-workspace-web
+    runtime: docker
+    plan: 0.5c-512mb
+    healthCheckPath: /up
+    preDeployCommand: bin/rails db:prepare
+    envVars:
+      - key: SECRET_KEY_BASE
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase: {name: seo-workspace-db, property: connectionString}
+      - key: APP_PROTOCOL
+        value: https
+      - key: DATAFORSEO_ENABLED
+        value: "false"
+  - type: worker
+    name: seo-workspace-jobs
+    runtime: docker
+    plan: 0.5c-512mb
+    dockerCommand: bin/worker
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase: {name: seo-workspace-db, property: connectionString}
+      - key: SECRET_KEY_BASE
+        fromService: {type: web, name: seo-workspace-web, envVarKey: SECRET_KEY_BASE}
+      - key: APP_HOST
+        fromService: {type: web, name: seo-workspace-web, envVarKey: RENDER_EXTERNAL_HOSTNAME}
+      - key: APP_PROTOCOL
+        value: https
+      - key: DATAFORSEO_ENABLED
+        value: "false"

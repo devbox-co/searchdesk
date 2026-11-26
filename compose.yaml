@@ -1,0 +1,53 @@
+name: seo-workspace
+x-app: &app
+  image: seo-workspace:local
+  build: .
+  env_file: .env
+  environment:
+    RAILS_ENV: production
+    SEARCHDESK_OWNER_CONTROLLED_AI: ${SEARCHDESK_OWNER_CONTROLLED_AI:-true}
+    PGHOST: db
+    PGUSER: workspace
+    PGPASSWORD: ${POSTGRES_PASSWORD:?Use bin/start to initialise local settings}
+    PGDATABASE: seo_workspace
+  restart: unless-stopped
+services:
+  db:
+    image: postgres:19.0-trixie
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: workspace
+      POSTGRES_DB: seo_workspace
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes: [pg19_data:/var/lib/postgresql]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U workspace -d seo_workspace"]
+      interval: 3s
+      timeout: 3s
+      retries: 25
+  prepare:
+    <<: *app
+    restart: "no"
+    command: ["bin/rails","db:prepare"]
+    depends_on:
+      db: {condition: service_healthy}
+  web:
+    <<: *app
+    ports: ["127.0.0.1:${LOCAL_PORT:-3038}:3000"]
+    volumes: [mail:/app/tmp/mail]
+    depends_on:
+      prepare: {condition: service_completed_successfully}
+    healthcheck:
+      test: ["CMD", "ruby", "-rnet/http", "-e", "exit(Net::HTTP.get_response(URI('http://127.0.0.1:3000/up')).is_a?(Net::HTTPSuccess) ? 0 : 1)"]
+      interval: 6s
+      timeout: 4s
+      retries: 20
+  jobs:
+    <<: *app
+    command: ["bin/jobs"]
+    volumes: [mail:/app/tmp/mail]
+    depends_on:
+      prepare: {condition: service_completed_successfully}
+volumes:
+  pg19_data:
+  mail:

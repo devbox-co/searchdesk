@@ -1,0 +1,20 @@
+<section class="overview-brief" aria-labelledby="overview-brief-heading">
+  <div class="brief-banner overview-brief-heading">
+    <%= ai_brief_origin(brief) %>
+    <h2 id="overview-brief-heading">Latest daily SEO brief</h2>
+    <p class="brief-date"><%= ui_icon(:calendar, size: 15) %> <%= time_tag brief.report_on, brief.report_on.strftime("%-d %B %Y") %></p>
+  </div>
+  <div class="overview-brief-preview">
+    <% report = AiAssistant::OwnerBrief.new(brief) %>
+    <% if (lead = report.lead) %>
+      <h3 class="overview-brief-takeaway"><%= lead.headline %></h3>
+      <% if lead.meaning.present? %><p class="overview-brief-finding"><%= lead.meaning %></p><% end %>
+      <% if (first_action = report.first_action) %>
+        <p class="overview-brief-finding"><strong>Do this first.</strong> <%= first_action.action %></p>
+      <% end %>
+    <% end %>
+    <%= link_to assistant_run_path(brief), class: "button solid brief-cta" do %>
+      Read full brief <%= ui_icon(:arrow_right, size: 16) %>
+    <% end %>
+  </div>
+</section>

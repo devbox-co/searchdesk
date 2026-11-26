@@ -1,0 +1,57 @@
+<% if (campaign = @campaign.selected) %>
+  <% rows = @campaign.rows
+     recorded = rows.filter_map { |r| r.dig(:current, :rank) }
+     observed = rows.count { |r| r[:current] }
+     rising = rows.count { |r| r[:change]&.positive? }
+     comparable = rows.count { |r| !r[:change].nil? } %>
+  <%= render "rank_stats", cards: [
+    {icon: :list, label: "Keywords in campaign", value: rows.size, detail: "#{observed} with an observation on this date"},
+    {icon: :target, label: "In the top 10", value: (recorded.empty? ? "—" : recorded.count { |r| r <= 10 }), detail: "#{pluralize(recorded.size, 'reported position')}"},
+    {icon: :trend_up, label: "Moved up", value: (comparable.zero? ? "—" : rising), detail: "#{pluralize(comparable, 'keyword')} with a comparison"}] %>
+<% end %>
+<section class="rank-panel">
+  <div class="rank-panel-header"><div><h2>Campaign positions</h2>
+    <% if campaign %><p class="notice rank-scope"><%= campaign[:location] %> · Google · <%= rank_icon_text(campaign[:device] == "desktop" ? :monitor : :smartphone, campaign[:device].capitalize, size: 14) %> · <%= campaign[:language] == "en" ? "English" : campaign[:language] %> · <%= campaign[:host] %></p><% end %>
+    </div>
+    <% if @campaign.available? %>
+      <%= form_with url: rankings_path, method: :get, class: "rank-controls" do |f| %>
+        <%= hidden_field_tag :source, "campaign" %>
+        <% if @campaign.campaigns.many? %><label>Campaign and search settings
+          <%= select_tag :campaign, options_for_select(@campaign.campaigns.map { |c| ["#{c[:location]} · #{c[:device]} · #{c[:language]} · #{c[:id]}", c[:key]] }, campaign&.fetch(:key)) %></label><% end %>
+        <%= f.label :day, "Campaign observation date" %>
+        <div><%= f.date_field :day, value: @day, max: @today, required: true %><%= f.submit "Show", class: "button" %></div>
+      <% end %>
+    <% end %>
+  </div>
+  <% if campaign %>
+    <div class="rank-availability"><span><%= rank_icon_text(:calendar, "Latest import · #{compact_date(@campaign.cutoff)}") %></span><%= link_to "Latest available", rankings_path(source: "campaign", campaign: campaign[:key]) %></div>
+    <%= render "dashboard/rank_key", features: true %>
+    <div class="rank-table-shell" tabindex="0" role="region" aria-label="Semrush campaign positions">
+      <table role="table" class="rank-table"><thead role="rowgroup"><tr role="row"><th role="columnheader" scope="col">Keyword</th><th role="columnheader" scope="col">Starting observation</th><th role="columnheader" scope="col"><%= @day == @today ? "Today" : "Selected day" %> · <%= compact_date(@day) %></th><th role="columnheader" scope="col">Since start</th></tr></thead>
+        <tbody role="rowgroup"><% rows.each do |row| %><% first, current, latest = row.values_at(:baseline, :current, :latest) %><tr role="row">
+          <th role="rowheader" scope="row" class="rank-term"><%= row[:term] %>
+            <% if current&.dig(:page) %><span class="rank-sub">Ranking page · <%= rank_page_link(current[:page]) %></span><% end %></th>
+          <td role="cell" data-label="Starting observation"><% if first %>
+              <span class="<%= first[:rank] ? "rank-value" : "rank-unmeasured" %>"><%= first[:rank] ? "##{first[:rank]}" : "No position reported" %></span>
+              <small><%= link_to compact_date(first[:date]), source_snapshot_path(first[:record]) %></small><%= rank_feature_badge(first[:feature]) %>
+              <% if row[:first][:date] < first[:date] %><small>No position on <%= link_to compact_date(row[:first][:date]), source_snapshot_path(row[:first][:record]) %></small><% end %>
+            <% else %><span class="rank-unmeasured">No baseline yet</span><% end %></td>
+          <td role="cell" data-label="<%= compact_date(@day) %>"><% if current %><strong class="<%= current[:rank] ? "rank-value" : "rank-unmeasured" %>"><%= current[:rank] ? "##{current[:rank]}" : "No position reported" %></strong>
+              <small><%= link_to compact_date(current[:date]), source_snapshot_path(current[:record]) %></small><%= rank_feature_badge(current[:feature]) %>
+            <% else %><span class="rank-unmeasured">No observation on this date</span>
+              <% if latest %><small>Last observation <%= link_to compact_date(latest[:date]), source_snapshot_path(latest[:record]) %><%= " · ##{latest[:rank]}" if latest[:rank] %></small><% end %><% end %></td>
+          <td role="cell" data-label="Since start">
+            <% start = if current&.dig(:rank) && first && first[:date] == current[:date]
+                 row[:first][:date] < first[:date] ? "First reported position" : "Starting observation"
+               end %>
+            <%= numeric_rank_change(row[:change], starting_label: start) %></td>
+        </tr><% end %></tbody>
+      </table>
+    </div>
+    <details class="rank-guide"><summary><%= rank_icon_text(:info, "How campaign movement and search features work") %></summary>
+      <p>Movement compares the selected date with the first reported position in this campaign for the same domain, location, device, language and search engine. Lower position numbers are better. The date links open the source records.</p>
+      <p><%= rank_feature_badge("Local pack", show_label: true) %> is a group of local business listings. <%= rank_feature_badge("AI Overview", show_label: true) %> is a generated summary. Semrush includes eligible features in this campaign and shows a badge when it identifies one. A blank badge leaves the result type unconfirmed.</p>
+      <p>Campaign ID <%= campaign[:id] %>.</p>
+    </details>
+  <% else %><div class="empty rank-empty"><h2>No matching campaign selected</h2><p>Choose a saved campaign or import a dated Semrush Position Tracking report for this domain.</p></div><% end %>
+</section>

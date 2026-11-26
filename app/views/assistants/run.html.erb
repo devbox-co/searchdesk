@@ -1,0 +1,101 @@
+<% published_brief = @run.kind == "brief" && %w[complete fallback].include?(@run.status) %>
+<% content_for :title, @run.kind == "brief" ? ai_run_title(@run) : (@run.kind == "test" ? "Connection test" : "Assistant answer") %>
+<%= link_to "Back to assistant", assistant_path, class: "back" %>
+<% if published_brief %>
+  <header class="brief-banner brief-report-header">
+    <%= ai_brief_origin(@run) %>
+    <h1>Daily SEO brief</h1>
+    <p class="brief-date"><%= current_site.name %> · <%= time_tag @run.report_on, @run.report_on.strftime("%-d %B %Y") %></p>
+  </header>
+<% else %>
+  <header class="hero"><div><p class="eyebrow"><%= current_site.name %> · <%= ai_local_datetime(@run.created_at) %></p>
+    <h1><%= ai_run_title(@run) %></h1></div><span class="badge"><%= ai_run_label(@run) %></span></header>
+<% end %>
+<div class="ai-column ai-reading<%= " ai-published-brief" if published_brief %>">
+  <section class="<%= published_brief ? "brief-report-findings" : "panel ai-card" %>" aria-label="Assistant result">
+    <% if %w[pending running].include?(@run.status) %>
+      <div data-ai-pending role="status"><h2><%= ui_icon(:calendar) %> Waiting for the worker</h2>
+        <p>This page updates as the background job runs. You can also return to it later.</p>
+        <%= link_to "Refresh status", assistant_run_path(@run) %></div>
+    <% elsif published_brief %>
+      <% report = AiAssistant::OwnerBrief.new(@run) %>
+      <% if @run.status == "fallback" %><p class="notice">OpenAI could not return a usable answer. Searchdesk is showing the available local evidence.</p><% end %>
+      <% if (first_action = report.first_action) %>
+        <section class="brief-first-action" aria-labelledby="first-action-heading">
+          <h2 id="first-action-heading"><%= ui_icon(:actions) %> Do this first</h2>
+          <p><%= first_action.action %></p>
+          <% if first_action.action_fact&.dig("url").present? %>
+            <%= ai_citation(first_action.action_fact, label: "Open supporting evidence") %>
+          <% end %>
+        </section>
+      <% end %>
+      <h2><%= ui_icon(:list) %> Findings</h2>
+      <% if report.readings.empty? %>
+        <p>There is no available evidence for this report.</p>
+      <% else %>
+        <ol class="ai-findings" role="list">
+          <% report.readings.each do |reading| %>
+            <li>
+              <h3><%= reading.headline %></h3>
+              <% if reading.meaning.present? %><p class="brief-meaning"><%= reading.meaning %></p><% end %>
+              <% if reading.facts.any? %>
+                <details class="brief-measurements">
+                  <summary>Measurements and sources<span class="sr-only"> for <%= reading.headline %></span></summary>
+                  <ul class="brief-sources">
+                    <% reading.facts.each do |fact| %>
+                      <li>
+                        <p><%= fact["text"] %></p>
+                        <%= ai_citation(fact, label: fact["source"].presence || "View evidence") %>
+                      </li>
+                    <% end %>
+                  </ul>
+                </details>
+              <% elsif reading.original_text.present? && reading.meaning != reading.original_text %>
+                <details class="brief-measurements">
+                  <summary>Saved details<span class="sr-only"> for <%= reading.headline %></span></summary>
+                  <p><%= reading.original_text %></p>
+                </details>
+              <% end %>
+            </li>
+          <% end %>
+        </ol>
+      <% end %>
+    <% elsif %w[complete fallback].include?(@run.status) %>
+      <h2><%= ui_icon(:sparkles) %> <%= @run.kind == "test" ? "Connection result" : "Findings" %></h2>
+      <% if @run.status == "fallback" %><p class="notice">OpenAI could not return a usable answer. Searchdesk is showing the available local evidence.</p><% end %>
+      <% facts = Array(@run.evidence["facts"]).index_by { |fact| fact["id"] } %>
+      <% findings = Array(@run.answer["findings"]) %>
+      <% if findings.empty? %><p>There is no available evidence for this report.</p><% end %>
+      <ol class="ai-findings" role="list"><% findings.each do |finding| %><li>
+        <p><%= finding["text"] %></p>
+        <% references = Array(finding["fact_ids"]).filter_map { |id| facts[id] } %>
+        <% if references.any? %>
+          <ul aria-label="Evidence" class="ai-citations"><% references.each do |fact| %><li><%= ai_citation(fact) %></li><% end %></ul>
+        <% end %>
+      </li><% end %></ol>
+    <% else %>
+      <h2><%= ai_run_label(@run) %></h2>
+      <p><%= ai_failure_guidance(@run) %></p>
+      <% if workspace_owner? && @run.kind != "test" %><%= link_to "Review assistant settings", assistant_settings_path %><% end %>
+    <% end %>
+    <% if @run.kind == "test" && workspace_owner? %><%= link_to "Return to OpenAI settings", assistant_settings_path %><% end %>
+  </section>
+  <% if @can_ask && %w[complete fallback].include?(@run.status) && @run.kind != "test" %>
+    <section class="panel ai-card">
+      <h2><%= ui_icon(:sparkles) %> Explore this report</h2>
+      <%= render "playbook_questions", playbooks: @playbooks, parent: @run %>
+      <%= render "composer", parent: @run %>
+    </section>
+  <% end %>
+  <details class="ai-details"><summary>Run details</summary>
+    <dl class="facts"><dt>Site</dt><dd><%= current_site.host %></dd><dt>Requested</dt><dd><%= ai_local_datetime(@run.created_at) %></dd>
+      <% if @run.model.present? %><dt>Model</dt><dd><%= @run.model %></dd><% end %>
+      <% if @run.recipe_version.present? %><dt>Recipe</dt><dd><%= @run.recipe_version %></dd><% end %>
+      <% if @run.actual_microusd.present? %><dt>Recorded usage</dt><dd><%= number_to_currency(@run.actual_microusd / 1_000_000.0, precision: 6) %> USD</dd><% end %>
+    </dl>
+    <% if workspace_owner? || (@run.kind == "question" && @run.user_id == current_user.id) %>
+      <%= button_to "Delete saved content", assistant_run_path(@run), method: :delete, class: "text-button",
+        form: {data: { turbo_confirm: "Delete this content and its follow-ups? Spending receipts are retained." }} %>
+    <% end %>
+  </details>
+</div>

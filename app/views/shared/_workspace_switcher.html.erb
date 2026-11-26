@@ -1,0 +1,18 @@
+<details class="switcher">
+  <summary><span class="site-avatar" aria-hidden="true"><%= (current_site&.name.presence || current_user.email).first.upcase %></span>
+    <span class="switcher-name"><%= current_site&.name.presence || "Workspace" %></span><span class="sr-only"> workspace menu</span><%= ui_icon(:chevron_down, size: 15) %>
+  </summary>
+  <div class="switchmenu">
+    <strong><%= current_user.email %></strong>
+    <% unless current_user.email_verified_at %><%= link_to "Verify email address", new_email_verification_path %><% end %>
+    <% available_sites.each do |site| %>
+      <%= button_to select_site_path(site), method: :post, class: "menu-item", disabled: site == current_site do %>
+        <%= site.name %><% if site == current_site %><%= ui_icon(:check, size: 16) %><span class="sr-only">Current site</span><% end %>
+      <% end %>
+    <% end %>
+    <% if can_manage_site? %><%= link_to "Set up a site", onboarding_path %><% end %>
+    <% if current_site && can_manage_site? %><%= link_to "Setup guide", setup_guide_path %><% end %>
+    <% if current_site && workspace_owner? %><%= link_to "Workspace members", workspace_members_path %><% end %>
+    <%= button_to "Sign out", logout_path, method: :delete, class: "menu-item" %>
+  </div>
+</details>

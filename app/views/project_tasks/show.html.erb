@@ -1,0 +1,16 @@
+<% content_for :title, @task.title %>
+<div class="form-page"><%= link_to "← Project tasks", project_tasks_path, class: "back" %>
+  <p class="eyebrow"><%= @task.external_id %></p><h1><%= @task.title %></h1>
+  <dl class="facts"><dt>Current status</dt><dd><%= @task.effective_status.humanize %></dd><dt>Imported status</dt><dd><%= @task.status.humanize %></dd><dt>Priority</dt><dd><%= @task.priority.humanize %></dd></dl>
+  <% if @task.summary.present? %><h2>Source summary</h2><%= simple_format(h(@task.summary)) %><% end %>
+  <% if @task.source_path.present? %><p class="source-reference"><%= @task.source_path %></p><% end %>
+  <% if can_manage_site? %>
+    <h2>Team updates</h2><p>Future imports preserve your working status and note.</p>
+    <%= render "shared/errors", record: @task %>
+    <%= form_with model: @task, class: "stack" do |f| %>
+      <%= f.label :working_status %><%= f.select :working_status, [["Use imported status", ""]] + ProjectTask::WORKING_STATES.map { |s| [s.humanize,s] } %>
+      <%= f.label :owner_note, "Team note" %><%= f.text_area :owner_note, rows: 4, maxlength: 10000 %>
+      <%= f.submit "Save task", class: "button solid" %>
+    <% end %>
+  <% elsif @task.owner_note.present? %><h2>Team note</h2><%= simple_format(h(@task.owner_note)) %><% end %>
+</div>

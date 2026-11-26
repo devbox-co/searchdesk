@@ -1,0 +1,50 @@
+<section class="panel audit-panel" aria-labelledby="audit-google-heading">
+  <header class="audit-heading">
+    <div><p class="audit-kicker">Google Search Console</p><h2 id="audit-google-heading">Organic search performance</h2></div>
+    <%= link_to "Connection details", search_console_path, class: "audit-link" %>
+  </header>
+  <% if @property %>
+    <p class="audit-caption"><%= @property %> · Entire property · Web search · All countries and devices · Pacific reporting dates</p>
+    <% if @connection.status == "delayed" %><p class="audit-message">Google sync is delayed. The dates below refer to the last saved report.</p><% end %>
+    <% if @performance.current %>
+      <% current = @performance.current; previous = @performance.previous %>
+      <p><strong><%= current[:start].strftime("%d %b %Y") %> – <%= current[:end].strftime("%d %b %Y") %></strong>
+        <% if previous %><span class="audit-caption"> compared with <%= previous[:start].strftime("%d %b %Y") %> – <%= previous[:end].strftime("%d %b %Y") %></span><% end %></p>
+      <dl class="audit-metrics">
+        <% {"clicks" => "Clicks", "impressions" => "Impressions", "ctr" => "Click-through rate", "position" => "Average position"}.each do |key, label| %>
+          <div><dt><%= label %></dt><dd><%= audit_stat_value(key, current[:metrics]&.fetch(key, nil)) %></dd>
+            <% if previous %><dd class="audit-prior">Previously <%= audit_stat_value(key, previous[:metrics]&.fetch(key, nil)) %></dd><% end %>
+          </div>
+        <% end %>
+      </dl>
+    <% else %><p>The first usable Google performance report is pending.</p><% end %>
+
+    <div class="audit-subsection">
+      <h3>Sitemaps</h3>
+      <% if @sitemaps&.fetch("status", nil) == "available" %>
+        <dl class="audit-sitemap">
+          <% {"count" => "Submitted", "pending" => "Awaiting processing", "errors" => "Errors", "warnings" => "Warnings"}.each do |key, label| %>
+            <div><dt><%= label %></dt><dd><%= number_with_delimiter(@sitemaps[key]) %></dd></div>
+          <% end %>
+        </dl>
+        <p class="audit-caption">Checked <%= audit_time(Time.iso8601(@sitemaps.fetch("checked_at"))) %>.
+          <% if @sitemaps["last_downloaded"] %>Latest sitemap download <%= audit_time(Time.iso8601(@sitemaps["last_downloaded"])) %>.<% end %></p>
+      <% elsif @sitemaps %><p>Google sitemap data was unavailable on the latest sync. Searchdesk will check again on the next sync.</p>
+      <% else %><p>The next Search Console sync will check submitted sitemaps.</p><% end %>
+      <p><%= link_to "Open submitted sitemaps in Google", audit_google_url("sitemaps", @property), target: "_blank", rel: "noopener noreferrer" %></p>
+    </div>
+    <div class="audit-subsection">
+      <h3>Googlebot crawl activity</h3>
+      <p>Google's Crawl Stats report shows its requests, server responses and host availability for this property.</p>
+      <%= link_to rank_icon_text(:external_link, "Open Google Crawl Stats"), audit_google_url("settings/crawl-stats", @property), target: "_blank", rel: "noopener noreferrer" %>
+    </div>
+  <% else %>
+    <p><%= case @connection&.status
+      when "reconnect" then "Reconnect Google to see this site's verified property metrics."
+      when "choose_property" then "Choose a matching verified property in Search Console settings."
+      else "Connect a verified Google Search Console property to see clicks, impressions and sitemap information."
+      end %></p>
+    <% if workspace_owner? %><%= link_to "Set up Search Console", search_console_path, class: "button" %>
+    <% else %><p class="audit-caption">The workspace owner manages the Search Console connection.</p><% end %>
+  <% end %>
+</section>

@@ -1,0 +1,44 @@
+<section class="overview-card" aria-labelledby="search-performance" id="search-chart">
+  <div class="overview-card-head"><div><h2 id="search-performance">Search performance</h2>
+    <p>Google Search Console · Web · all countries and devices</p></div></div>
+  <% plot = daily_plot(@daily) %>
+  <% if plot %>
+    <nav class="overview-switch" aria-label="Search chart metric">
+      <% %w[clicks impressions].each do |metric| %>
+        <%= link_to metric.capitalize, overview_filter_path(metric: metric, anchor: "search-chart"),
+          id: "search-chart-#{metric}", data: { turbo_frame: "overview-filters" }, aria: { current: @metric == metric ? "true" : nil } %>
+      <% end %>
+    </nav>
+    <figure class="daily-figure">
+      <svg viewBox="0 0 596 176" role="img" aria-labelledby="search-plot-title search-plot-desc">
+        <title id="search-plot-title">Daily search <%= @metric %></title>
+        <desc id="search-plot-desc"><%= compact_date(@daily.first[:date]) %> to <%= compact_date(@daily.last[:date]) %>. The table below contains the daily values. Gaps indicate dates without a reported value.</desc>
+        <% [0, 0.5, 1].each do |fraction| %>
+          <% y = 140 - 110 * fraction %>
+          <line class="daily-gridline" x1="51" x2="576" y1="<%= y %>" y2="<%= y %>"/>
+          <text class="daily-axis" x="43" y="<%= y + 4 %>" text-anchor="end"><%= number_to_human(plot[:top] * fraction, units: {unit: "", thousand: "k", million: "m"}, format: "%n%u", precision: 2) %></text>
+        <% end %>
+        <% plot[:segments].each do |segment| %>
+          <% coordinates = segment.map { |point| "#{point[:x]},#{point[:y]}" }.join(" ") %>
+          <polygon class="daily-fill" points="<%= segment.first[:x] %>,140 <%= coordinates %> <%= segment.last[:x] %>,140" />
+          <polyline class="daily-line" points="<%= coordinates %>"/>
+          <% segment.each do |point| %><circle cx="<%= point[:x] %>" cy="<%= point[:y] %>" r="3" class="daily-point">
+            <title><%= compact_date(point[:date]) %> · <%= pluralize(point[:value], @metric.singularize) %></title>
+          </circle><% end %>
+        <% end %>
+        <text class="daily-axis" x="51" y="165"><%= @daily.first[:date].strftime("%-d %b") %></text>
+        <text class="daily-axis" x="313" y="165" text-anchor="middle"><%= @daily[@daily.size / 2][:date].strftime("%-d %b") %></text>
+        <text class="daily-axis" x="576" y="165" text-anchor="end"><%= @daily.last[:date].strftime("%-d %b") %></text>
+      </svg>
+      <figcaption>Final daily <%= @metric %> · Pacific reporting dates</figcaption>
+    </figure>
+    <details class="overview-values" id="daily-values"><summary>Daily values</summary><div><table>
+      <thead><tr><th scope="col">Date</th><th scope="col"><%= @metric.capitalize %></th></tr></thead>
+      <tbody><% @daily.reverse_each do |point| %><tr><th scope="row"><%= compact_date(point[:date]) %></th><td><%= point[:value].nil? ? "No reported value" : number_with_delimiter(point[:value]) %></td></tr><% end %></tbody>
+    </table></div></details>
+  <% else %>
+    <p class="overview-empty"><%= @performance.current ? "Daily values will appear after a sync returns dated search results." : "Connect a Search Console property to see your Google search traffic over time." %></p>
+  <% end %>
+  <% if @performance.connection&.status == "delayed" %><p class="overview-empty">The latest sync was delayed. Figures use the last saved report.</p><% end %>
+  <%= link_to "View Search Console report", search_console_path, class: "overview-more" %>
+</section>

@@ -1,0 +1,28 @@
+<h1>Workspace members</h1>
+<p>Manage access to <%= current_workspace.name %>. Managers can change site data. Viewers can read it.</p>
+<section aria-label="People with access">
+  <% @memberships.each do |membership| %>
+    <article>
+      <h2><%= membership.user.email %></h2>
+      <% if membership.owner? %>
+        <p>Workspace owner</p>
+      <% else %>
+        <%= form_with model: membership, url: workspace_member_path(membership), method: :patch do |form| %>
+          <%= form.label :role, "Role for #{membership.user.email}", for: "membership_role_#{membership.id}" %>
+          <%= form.select :role, Membership::ASSIGNABLE_ROLES, {}, id: "membership_role_#{membership.id}" %>
+          <%= form.submit "Save role" %>
+        <% end %>
+        <%= button_to "Remove access", workspace_member_path(membership), method: :delete %>
+      <% end %>
+    </article>
+  <% end %>
+</section>
+<h2>Add a member</h2>
+<p>The person must first create an account and verify their email on the <%= link_to "email verification page", new_email_verification_path %>.</p>
+<%= form_with scope: :membership, url: workspace_members_path do |form| %>
+  <%= form.label :email, "Account email" %>
+  <%= form.email_field :email, required: true %>
+  <%= form.label :role %>
+  <%= form.select :role, Membership::ASSIGNABLE_ROLES, selected: "viewer" %>
+  <%= form.submit "Add member" %>
+<% end %>

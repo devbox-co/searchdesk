@@ -1,0 +1,16 @@
+<section aria-labelledby="maps-scans">
+  <h2 id="maps-scans">Latest Google Maps scans</h2>
+  <% if @map_scans.empty? %>
+    <p>No completed Google Maps scans have been saved for this site.</p>
+  <% else %>
+    <p>Share of Local Voice (SoLV) is the percentage of scanned locations where the business appeared in Google Maps’ top three. Each keyword shows its latest saved scan.</p>
+    <% @map_scans.each do |scan| %><article class="card action">
+      <h3><%= scan.snapshot.keyword %></h3>
+      <p><%= compact_date(scan.snapshot.observed_on) %><% if (size = scan.grid_size) %> · <%= size %> × <%= size %> grid<% end %><% if (radius = scan.radius) %> · <%= number_with_precision(radius.first, precision: 2, strip_insignificant_zeros: true) %> <%= radius.last %> radius<% end %></p>
+      <p><strong><%= scan.share.nil? ? "SoLV unavailable" : "#{number_to_percentage(scan.share, precision: 2, strip_insignificant_zeros: true)} SoLV" %></strong><% if (counts = scan.top_three_counts) %> · Top three at <%= counts.first %> of <%= counts.last %> scanned locations<% end %></p>
+      <% scan.comparisons.each do |pair| %><p>Compared with <%= compact_date(pair[:date]) %> at <%= pair[:pins] %> matched locations, <%= pair[:gained] %> entered the top three and <%= pair[:lost] %> left.</p><% end %>
+      <p><%= link_to "Open Local Falcon report", scan.report_url, target: "_blank", rel: "noopener noreferrer" %> · <%= link_to "View scan evidence", source_snapshot_path(scan.snapshot) %></p>
+    </article><% end %>
+  <% end %>
+  <%= link_to "Browse Local Falcon evidence", source_snapshots_path(provider: "Local Falcon") %>
+</section>

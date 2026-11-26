@@ -1,0 +1,8 @@
+<li class="setup-step">
+  <div><h3><%= name %></h3><p><%= description %></p></div>
+  <% if connected %>
+    <span class="setup-status">Connected</span>
+  <% else %>
+    <%= link_to "Set up #{name}", path, class: "button" %>
+  <% end %>
+</li>

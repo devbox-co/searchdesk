@@ -1,0 +1,62 @@
+.lf-card { scroll-margin-top:1rem; background:var(--paper,#fff); border:1px solid var(--line,#d9e0eb); border-radius:.95rem; color:var(--ink,#17253d); overflow:hidden; }
+.lf-heading,.lf-content { padding:1.25rem; }
+.lf-heading { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:1rem; border-bottom:1px solid var(--line); }
+.lf-card h2,.lf-card h3,.lf-card h4,.lf-card p,.lf-card figure { margin:0; }
+.lf-heading h2 { font-size:1.25rem; letter-spacing:-.03em; }
+.lf-heading p,.lf-scope,.lf-trend p { color:var(--muted); font-size:.82rem; margin-top:.3rem; }
+.lf-picker { margin:0; min-width:0; max-width:100%; }
+.lf-picker label { display:block; font-size:.76rem; font-weight:650; color:var(--muted); }
+.lf-picker > div { display:flex; align-items:center; gap:.35rem; margin-top:.22rem; }
+.lf-picker select,.lf-picker .button { min-width:0; width:auto; max-width:100%; font-size:.84rem; min-height:2.25rem; }
+.lf-picker .button { white-space:nowrap; padding:.35rem .65rem; }
+.lf-content { display:grid; grid-template-columns:minmax(0,1.18fr) minmax(13rem,.86fr); gap:clamp(1.25rem,3vw,3rem); }
+.lf-geography,.lf-summary { min-width:0; }
+.lf-views { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-start; gap:.2rem; margin:0; padding:0; border:0; min-width:0; }
+.lf-sr { position:absolute!important; width:1px!important; height:1px!important; padding:0!important; margin:-1px!important; overflow:hidden; clip-path:inset(50%); white-space:nowrap; border:0!important; }
+.lf-views .lf-mode+label { cursor:pointer; display:inline-flex; align-items:center; padding:.35rem .68rem; font-size:.8rem; font-weight:650; border:1px solid transparent; border-radius:.4rem; line-height:1.35; margin:0 .1rem .35rem 0; color:var(--muted); }
+.lf-views .lf-mode:checked+label { background:#eaf0fc; border-color:#cbd9ed; color:#224690; }
+.lf-views .lf-mode:focus-visible+label { outline:3px solid #466bca; outline-offset:1px; }
+.lf-views .lf-mode:disabled+label { color:#737d8e; cursor:default; }
+.lf-map-notice { flex-basis:100%; font-size:.82rem; color:var(--muted); padding-bottom:.4rem; }
+.lf-views figure { width:100%; }
+.lf-street img { width:100%; height:auto; aspect-ratio:1; display:block; border-radius:.68rem; border:1px solid #cfd9d9; font-size:.9rem; }
+#lf-pins:checked~.lf-street,#lf-street:checked~.lf-grid-view { display:none; }
+.lf-grid { position:relative; width:100%; aspect-ratio:1; border:1px solid #ccd9df; border-radius:.65rem; container-type:inline-size; color:#354759; background-color:#edf3f4;
+  background-image:linear-gradient(90deg,#cbd9df88 1px,transparent 1px),linear-gradient(#cbd9df88 1px,transparent 1px);
+  background-size:10% 10%; }
+.lf-north { position:absolute; right:2%; top:.5%; font-size:.72rem; font-weight:700; }
+.lf-pin { display:grid; place-items:center; position:absolute; transform:translate(-50%,-50%); width:min(2.2rem,calc(72% / var(--grid-size))); aspect-ratio:1; border:1px solid #fff; border-radius:50%; font-weight:730; font-size:clamp(.42rem,calc(30cqi / var(--grid-size)),.92rem); box-shadow:0 1px 2px #233c4629; }
+.lf-pin-top { background:#13644e; color:#fff; }.lf-pin-mid { background:#ffe09b; color:#563a03; }.lf-pin-lower { background:#b64228; color:#fff; }.lf-pin-outside { background:#47576c; color:#fff; }.lf-pin-missing { background:#edf0f4; color:#3c4a62; }
+.lf-key { display:flex; flex-wrap:wrap; gap:.25rem .8rem; padding:.6rem .1rem 0; }
+.lf-key span { display:inline-flex; align-items:center; gap:.22rem; font-size:.74rem; color:var(--muted); }
+.lf-key i { display:inline-block; width:.65rem; height:.65rem; border:1px solid #233c462b; border-radius:50%; }
+.lf-coordinates { margin:.65rem 0 0; font-size:.8rem; color:var(--muted); }
+.lf-coordinates summary { cursor:pointer; color:var(--link); font-weight:600; padding:.25rem 0; }
+.lf-table-scroll { max-height:14rem; overflow:auto; }
+.lf-table-scroll table { width:100%; margin:0; font-variant-numeric:tabular-nums; font-size:.76rem; }
+.lf-table-scroll :is(td,th) { white-space:nowrap; padding:.4rem .3rem; text-align:left; }
+.lf-summary { padding-top:.22rem; }
+.lf-summary h3 { font-size:clamp(1.18rem,2.3vw,1.55rem); letter-spacing:-.035em; overflow-wrap:anywhere; }
+.lf-metric { margin:1.2rem 0; border-bottom:1px solid var(--line); padding-bottom:1.15rem; }
+.lf-metric p,.lf-trend h4 { color:var(--ink); font-size:.87rem; font-weight:650; }
+.lf-metric strong { display:block; margin:.2rem 0; font-size:clamp(1.6rem,3.5vw,2.7rem); line-height:1.08; font-weight:700; letter-spacing:-.055em; font-variant-numeric:tabular-nums; }
+.lf-metric span { color:var(--muted); font-size:.86rem; }
+.lf-trend ul { list-style:none; padding:0; margin:.55rem 0 0; }
+.lf-trend li a { display:grid; grid-template-columns:3.6rem minmax(0,1fr) 3.9rem; align-items:center; gap:.55rem; padding:.4rem .2rem; font-size:.8rem; color:var(--ink); text-decoration:none; font-variant-numeric:tabular-nums; }
+.lf-trend li a:hover time { text-decoration:underline; }
+.lf-trend b { text-align:right; font-size:.78rem; }
+.lf-bar { display:block; background:#edf0f6; border-radius:2rem; height:.55rem; overflow:hidden; }
+.lf-bar i { display:block; background:#849cda; border-radius:inherit; height:100%; }
+.lf-trend [aria-current=true] .lf-bar i { background:#3c5eae; }
+.lf-links { display:flex; flex-wrap:wrap; gap:.55rem 1rem; margin:1rem 0 0; font-size:.84rem; font-weight:630; }
+.lf-empty,.lf-no-scans { background:#f2f5fa; border-radius:.65rem; padding:1.3rem; color:var(--muted); }
+.lf-empty h3,.lf-no-scans h3 { margin:.45rem 0; font-size:1rem; color:var(--ink); }
+.lf-empty p,.lf-no-scans p { font-size:.88rem; line-height:1.5; }
+.lf-no-scans { margin:1.2rem; display:flex; align-items:flex-start; gap:.7rem; }
+.lf-no-scans h3 { margin-top:0; }.lf-no-scans a { display:inline-block; margin-top:.5rem; }
+@media(max-width:760px) {
+  .lf-heading,.lf-content { padding:1rem; }
+  .lf-content { grid-template-columns:minmax(0,1fr); gap:1.1rem; }
+  .lf-geography { width:100%; max-width:32rem; }
+  .lf-picker .button,.lf-picker select,.lf-views .lf-mode+label { min-height:2.75rem; }
+}

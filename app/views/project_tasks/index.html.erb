@@ -1,0 +1,16 @@
+<% content_for :title, "Project tasks" %>
+<div class="hero"><div><p class="eyebrow"><%= current_site.name %></p><h1>Project tasks</h1><p>Track imported work alongside your team's current decisions and notes.</p></div>
+<% if can_manage_site? %><%= link_to "Import project records", new_project_import_path, class: "button solid" %><% end %></div>
+<%= form_with url: project_tasks_path, method: :get, class: "filter" do |f| %>
+  <label>Status <%= select_tag :status, options_for_select([["All statuses", ""]] + @statuses.map { |s| [s.humanize,s] }, params[:status]) %></label>
+  <label>Priority <%= select_tag :priority, options_for_select([["All priorities", ""]] + @priorities, params[:priority]) %></label>
+  <label>Find a task <%= f.search_field :q, value: params[:q] %></label>
+  <%= f.submit "Filter", class: "button" %><%= link_to "Clear", project_tasks_path %>
+<% end %>
+<% if @records.empty? %><div class="empty"><h2>No tasks in this view</h2><p>Import project tasks or change your filters.</p></div><% end %>
+<% @records.each do |task| %><article class="card action">
+  <p class="eyebrow"><%= task.external_id %> · <%= task.priority.humanize %> priority</p>
+  <h2><%= link_to task.title, project_task_path(task) %></h2><span class="badge"><%= task.effective_status.humanize %></span>
+  <% if task.summary.present? %><p><%= truncate(task.summary, length: 220) %></p><% end %>
+</article><% end %>
+<%= render "shared/project_pages" %>

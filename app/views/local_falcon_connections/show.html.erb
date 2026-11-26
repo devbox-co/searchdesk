@@ -1,0 +1,31 @@
+<% content_for :title, "Local Falcon reporting" %>
+<div class="form-page">
+  <%= link_to "← Integrations", integrations_path, class: "back" %>
+  <p class="eyebrow">Maps coverage</p><h1>Local Falcon reporting</h1>
+  <p>Read completed Google Maps scans, campaign schedules and available Business Profile metrics for <strong><%= current_site.host %></strong>. Your existing Local Falcon schedule controls when new scans run.</p>
+  <dl class="facts">
+    <dt>Location</dt><dd><%= @connection&.verified_name || @connection&.place_id || (@saved_report ? "From saved scan report" : "Not selected") %></dd>
+    <dt>Account</dt><dd><%= {"connected" => "Authorised", "delayed" => "Refresh delayed", "reconnect" => "Reconnect required"}.fetch(@connection&.status, "Not connected") %></dd>
+    <% if @connection&.synced_at %><dt>Last successful refresh</dt><dd><%= @connection.synced_at.in_time_zone(current_site.time_zone).strftime("%d %b %Y, %H:%M %Z") %></dd>
+      <dt>Results</dt><dd><%= @connection.result["scans"] %> scan summaries · <%= @connection.result["campaigns"] %> campaign schedules · <%= @connection.result["gbp"] %></dd><% end %>
+  </dl>
+  <% if @connection&.last_error.present? %><p class="notice"><%= @connection.last_error %></p><% end %>
+  <%= render "maps_summary" %>
+  <% if workspace_owner? %>
+    <% if !@connection&.refresh_token.present? %>
+      <p>Choose a saved scan report or enter the listing’s Google Place ID. The listing’s website must match this site.</p>
+      <%= link_to @saved_report ? "View saved scan link" : "Save a scan report link", integration_path("local-falcon") %>
+      <%= form_with url: local_falcon_connection_path, method: :patch, class: "stack" do |f| %>
+        <%= f.label :place_id, "Google Place ID" %><%= f.text_field :place_id, value: @connection&.place_id, maxlength: 180, autocomplete: "off" %>
+        <%= f.submit "Save location", class: "button" %>
+      <% end %>
+    <% end %>
+    <div class="stack">
+      <% if !@connection&.refresh_token.present? || @connection.status == "reconnect" %>
+        <p>Local Falcon will ask for permission to access your account in the background. Searchdesk reads reports for this verified location.</p>
+        <%= button_to "Connect Local Falcon", authorize_local_falcon_connection_path, class: "button solid", form: { data: { turbo: false } } %>
+      <% else %><%= button_to "Refresh existing reports", sync_local_falcon_connection_path, class: "button solid" %><% end %>
+      <% if @connection&.persisted? %><%= button_to "Disconnect", local_falcon_connection_path, method: :delete, class: "text-button" %><% end %>
+    </div>
+  <% end %>
+</div>

@@ -1,0 +1,9 @@
+<%= form_with url: assistant_questions_path, class: "ai-composer" do |f| %>
+  <%= hidden_field_tag :request_key, SecureRandom.uuid %>
+  <%= hidden_field_tag :parent_id, parent.id if parent %>
+  <%= f.label :question, parent ? "Ask a follow-up" : "Your question" %>
+  <%= f.text_area :question, value: parent ? nil : @starter, rows: 3, maxlength: AiRun::QUESTION_LIMIT,
+    required: true, aria: {describedby: "question-help"}, placeholder: "What should I check first?" %>
+  <p class="hint" id="question-help">Your question and the selected site facts are sent to OpenAI. Leave out customer and patient details.</p>
+  <%= f.submit parent ? "Send follow-up" : "Ask Searchdesk", class: "button solid" %>
+<% end %>

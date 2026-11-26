@@ -1,0 +1,42 @@
+<% content_for :title, "Rankings" %>
+<turbo-frame id="rankings-filters" class="rankings-view" target="_top" data-turbo-action="advance" data-filter-frame="<%= current_site.id %>">
+  <header class="rank-heading">
+    <div><p class="rank-context"><%= rank_icon_text(:globe, current_site.host, size: 14) %></p><h1>Daily keyword rankings</h1>
+      <p class="rank-intro"><%= case @source
+        when "campaign" then "Compare your imported Semrush positions with their first readings."
+        when "gsc" then "See the average position customers saw in Google Search."
+        else "Track your Google Search positions by device in #{current_site.location}."
+        end %></p>
+    </div>
+    <% if can_manage_site? %><%= link_to new_keyword_path, class: "button solid rank-main-action" do %><%= rank_icon_text(:plus, "Add keyword") %><% end %><% end %>
+  </header>
+
+  <nav class="rank-source-tabs" id="ranking-sources" aria-label="Ranking source">
+    <%= link_to rankings_path(source: "local", device: @device, anchor: "ranking-sources"),
+      id: "ranking-source-local", data: { turbo_frame: "rankings-filters" }, aria: { label: "Local organic rank", current: @source == "local" ? "page" : nil } do %>
+      <%= ui_icon(:target, size: 16) %><span>Local <span class="rank-source-detail">organic </span>rank</span>
+    <% end %>
+    <% gsc_measure = [@country_label, "average position"].compact.join(" ") %>
+    <%= link_to rankings_path(source: "gsc", device: @device, anchor: "ranking-sources"),
+      id: "ranking-source-gsc", data: { turbo_frame: "rankings-filters" }, aria: { label: "Search Console · #{gsc_measure}", current: @source == "gsc" ? "page" : nil } do %>
+      <%= ui_icon(:search, size: 16) %><span>Search Console<span class="rank-source-detail"> · <%= gsc_measure %></span></span>
+    <% end %>
+    <% if @campaign.available? %>
+      <%= link_to rankings_path(source: "campaign", device: @device, anchor: "ranking-sources"),
+        id: "ranking-source-campaign", data: { turbo_frame: "rankings-filters" }, aria: { label: "Semrush campaign", current: @source == "campaign" ? "page" : nil } do %>
+        <%= ui_icon(:layers, size: 16) %><span>Semrush<span class="rank-source-detail"> campaign</span></span>
+      <% end %>
+    <% end %>
+  </nav>
+
+  <% if @source == "campaign" %><%= render "campaign_positions" %>
+  <% elsif @source == "gsc" %><%= render "positions" %>
+  <% else %><%= render "local_positions" %><% end %>
+
+  <div class="rank-footlinks">
+    <%= link_to rank_icon_text(:sparkles, "Ask about these rankings"), assistant_path(starter: "movement") %>
+    <%= link_to rank_icon_text(:file_text, "Browse source evidence"), source_snapshots_path %>
+    <%= link_to rank_icon_text(:map_pin, "Explore the local rank map"), dashboard_path(anchor: "local-visibility") %>
+    <%= link_to rank_icon_text(:audit, "View site audit"), site_audit_path %>
+  </div>
+</turbo-frame>

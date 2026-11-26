@@ -1,0 +1,90 @@
+<% content_for :title, "Assistant settings" %>
+<%= link_to "Back to assistant", assistant_path, class: "back" %>
+<header class="hero"><div><p class="eyebrow"><%= current_workspace.name %></p><h1>Assistant settings</h1>
+  <p>Connect the account that pays, then choose how <%= current_site.name %> uses it.</p></div></header>
+<div class="ai-layout ai-settings">
+  <section class="panel ai-card" aria-labelledby="account-heading">
+    <div class="ai-heading"><h2 id="account-heading"><%= ui_icon(:integrations) %> OpenAI account</h2>
+      <span class="badge"><%= ai_connection_label(@connection) %></span></div>
+    <p>The allowance is shared across this workspace. OpenAI bills the API project for questions, connection tests and daily briefs.</p>
+    <% if AiConnection.owner_controlled_installation? %>
+      <% if @connection.configured? && (guidance = ai_account_guidance(ai_connection_label(@connection))) %><p class="notice"><%= guidance %></p><% end %>
+      <details class="ai-details">
+        <summary>Get a project API key</summary>
+        <ol><li>In the OpenAI API platform, choose the project you want to bill and check that API billing is active.</li>
+          <li>In project settings, create a dedicated service account for Searchdesk. Give its key write access to Responses.</li>
+          <li>Paste the secret below, set an allowance and save. Run a connection test to verify access.</li></ol>
+        <p><%= link_to "Open OpenAI project settings", "https://platform.openai.com/settings/organization/projects", target: "_blank", rel: "noopener noreferrer" %></p>
+      </details>
+      <%= form_with url: assistant_connection_path, scope: :ai_connection, method: :patch, class: "ai-form" do |f| %>
+        <%= f.label :project_label, "Billing project label" %><%= f.text_field :project_label, value: @connection.project_label, required: true, maxlength: 120, placeholder: "e.g. Searchdesk SEO" %>
+        <%= f.label :api_key, @connection.persisted? && @connection.configured? ? "Replace API key" : "Project API key" %>
+        <%= f.password_field :api_key, value: nil, required: !@connection.configured?, autocomplete: "new-password", spellcheck: false, aria: {describedby: "key-help"} %>
+        <small id="key-help"><%= @connection.persisted? && @connection.configured? ? "A key is saved. Leave this blank to keep it." : "Searchdesk encrypts this key on your installation." %></small>
+        <%= f.label :monthly_budget_usd, "Monthly workspace allowance (USD)" %>
+        <%= f.number_field :monthly_budget_usd, value: format("%.2f", @connection.monthly_budget_cents.to_i / 100.0),
+          required: true, min: "0", step: "0.01", inputmode: "decimal", aria: {describedby: "budget-help"} %>
+        <small id="budget-help">$0 pauses paid requests. A $1 monthly allowance is a starting point for a small site.</small>
+        <%= f.submit "Save OpenAI account", class: "button solid" %>
+      <% end %>
+      <% if @connection.persisted? && @connection.configured? %>
+        <dl class="facts ai-account-facts"><dt>Model</dt><dd><%= AiAssistant::OpenaiClient::MODEL %></dd>
+          <dt>This month</dt><dd><%= number_to_currency(@connection.month_spend_microusd / 1_000_000.0, precision: 5) %> USD used or reserved</dd>
+          <% if @connection.last_verified_at %><dt>Last verified</dt><dd><%= ai_local_datetime(@connection.last_verified_at) %></dd><% end %></dl>
+        <p class="hint">The test sends synthetic text in one paid API request. It uses the workspace allowance.</p>
+        <div class="ai-controls">
+          <%= button_to "Test connection", test_assistant_connection_path, params: {request_key: SecureRandom.uuid},
+            disabled: @connection.monthly_budget_cents.zero?, class: "button" %>
+          <%= button_to "Disconnect account", assistant_connection_path, method: :delete, class: "text-button",
+            form: {data: {turbo_confirm: "Disconnect OpenAI for every site in this workspace?"}} %>
+        </div>
+      <% end %>
+    <% else %>
+      <p class="notice">OpenAI credential entry is available on an installation controlled by the API account owner.</p>
+    <% end %>
+  </section>
+  <div class="ai-column">
+    <section class="panel ai-card" id="site-settings" aria-labelledby="site-heading">
+      <h2 id="site-heading"><%= ui_icon(:globe) %> <%= current_site.name %></h2>
+      <p class="ai-meta"><%= current_site.host %> · <%= current_site.location %> · <%= current_site.time_zone %></p>
+      <%= form_with model: @setting, url: assistant_site_settings_path, method: :patch, class: "ai-form" do |f| %>
+        <fieldset><legend>Site access</legend>
+          <label class="ai-check"><%= f.check_box :enabled %><span>Enable the assistant for this site</span></label>
+          <p class="hint">Questions and briefs share site details, tracked keyword and page facts, actions, task summaries and your project brief with OpenAI. Provider abuse-monitoring retention can apply. Turning the assistant off clears saved site history.</p>
+          <label class="ai-check"><%= f.check_box :managers_enabled %><span>Allow site managers to ask questions</span></label>
+          <label class="ai-check"><%= f.check_box :daily_brief_enabled %><span>Generate one daily brief automatically</span></label>
+          <p class="hint">Site members can read published briefs. The worker checks from 09:00 local time and uses available readings from 12:00. Generation starts after the account passes its test and the site assistant is enabled.</p>
+        </fieldset>
+        <fieldset><legend>Additional facts to share with OpenAI</legend>
+          <label class="ai-check"><%= f.check_box :share_google %><span>Google Search Console and GA4 reporting metrics</span></label>
+          <label class="ai-check"><%= f.check_box :share_maps %><span>Local Falcon Maps grid summaries</span></label>
+          <label class="ai-check"><%= f.check_box :share_semrush %><span>Imported Semrush campaign rankings</span></label>
+        </fieldset>
+        <fieldset class="ai-brief-fields"><legend>Project brief</legend>
+          <p class="hint">Use business-level details. Leave out personal information about customers, patients and staff.</p>
+          <%= f.label :services, "Priority services" %><%= f.text_area :services, rows: 2, maxlength: AiSetting::FIELD_LIMIT %>
+          <%= f.label :priorities, "Business goals" %><%= f.text_area :priorities, rows: 2, maxlength: AiSetting::FIELD_LIMIT %>
+          <%= f.label :enquiry_definition, "What counts as a useful enquiry?" %><%= f.text_area :enquiry_definition, rows: 2, maxlength: AiSetting::FIELD_LIMIT %>
+        </fieldset>
+        <%= f.submit "Save site settings", class: "button solid" %>
+      <% end %>
+    </section>
+    <section class="panel ai-card" id="evidence-preview">
+      <h2><%= ui_icon(:evidence) %> Evidence preview</h2>
+      <p>This preview runs locally and shows the facts allowed by your saved source choices.</p>
+      <% if !@setting.enabled? || !@connection.configured? || @connection.status != "ready" %>
+        <p class="hint">Live analysis is paused until an OpenAI account is verified and the site assistant is enabled.</p>
+      <% end %>
+      <% if @preview %>
+        <% facts = Array(@preview["facts"]) %>
+        <% if facts.empty? %><p>There are no eligible facts for this site yet.</p><% end %>
+        <ol class="ai-preview"><% facts.each do |fact| %><li><%= fact["text"] %><small><%= ai_citation(fact) %></small></li><% end %></ol>
+      <% else %><%= link_to "Preview eligible facts", assistant_settings_path(preview: 1, anchor: "evidence-preview") %><% end %>
+    </section>
+    <details class="ai-details"><summary>Delete site history</summary>
+      <p>Clear saved questions, answers, daily briefs and follow-ups for everyone on <%= current_site.name %>. Searchdesk retains minimal billing receipts.</p>
+      <%= button_to "Delete this site’s assistant history", assistant_history_path, method: :delete, class: "text-button",
+        form: {data: {turbo_confirm: "Delete all saved assistant content for #{current_site.name}? This cannot be undone."}} %>
+    </details>
+  </div>
+</div>

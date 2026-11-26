@@ -1,0 +1,8 @@
+<div class="rank-stats" role="group" aria-label="Ranking summary">
+  <% cards.each do |card| %>
+    <div class="rank-stat"><div class="rank-stat-heading"><span><%= card.fetch(:label) %></span><%= ui_icon(card.fetch(:icon), size: 17) %></div>
+      <span class="rank-stat-number"><%= card.fetch(:value) %></span>
+      <span class="rank-stat-note"><%= card.fetch(:detail) %></span>
+    </div>
+  <% end %>
+</div>

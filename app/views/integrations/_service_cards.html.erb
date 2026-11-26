@@ -1,0 +1,13 @@
+<div class="integration-services">
+  <% entries.each do |entry| %>
+    <% state = integration_state(entry) %>
+    <article class="integration-service">
+      <%= link_to integration_path(entry.key), class: "service" do %>
+        <h3 class="service-name"><%= entry.name %></h3><%= integration_badge(state) %>
+      <% end %>
+      <p><%= entry.description %></p>
+      <% unless entry.mode == "Planned" %><small><%= state[:detail] %></small><% end %>
+      <%= render "imported_reports", state: state %>
+    </article>
+  <% end %>
+</div>

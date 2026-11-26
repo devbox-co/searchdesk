@@ -1,0 +1,24 @@
+<% content_for :title, "Source evidence" %>
+<div class="hero">
+  <div><p class="eyebrow"><%= current_site.name %></p><h1>Source evidence</h1>
+    <p>Browse dated reports with their original measurement scope. Your watchlist tracks daily organic ranks separately.</p></div>
+  <% if can_manage_site? %><%= link_to "Import project records", new_project_import_path, class: "button solid" %><% end %>
+</div>
+<%= form_with url: source_snapshots_path, method: :get, class: "filter" do |f| %>
+  <% if @imports_only %><%= hidden_field_tag :origin, "imported" %><span>Imported reports only</span><% end %>
+  <label>Source <%= select_tag :provider, options_for_select([["All sources", ""]] + @providers, params[:provider]) %></label>
+  <label>Keyword <%= f.text_field :keyword, value: params[:keyword], placeholder: "Exact phrase" %></label>
+  <label>Search evidence <%= f.search_field :q, value: params[:q] %></label>
+  <%= f.submit "Filter", class: "button" %><%= link_to "Clear", source_snapshots_path %>
+<% end %>
+<% if @records.empty? %>
+  <div class="empty"><h2>No source records in this view</h2><p>Import a dated report or change your filters.</p></div>
+<% else %>
+  <% @records.each do |record| %>
+    <article class="card action"><p class="eyebrow"><%= record.provider %> · <%= compact_date(record.observed_on) %></p>
+      <h2><%= link_to record.title, source_snapshot_path(record) %></h2>
+      <p><%= truncate(record.scope, length: 240) %></p>
+      <% if record.keyword.present? %><small>Keyword · <%= record.keyword %></small><% end %>
+    </article>
+  <% end %>
+<% end %><%= render "shared/project_pages" %>
