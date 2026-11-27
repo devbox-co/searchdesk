@@ -1,0 +1,26 @@
+<% period = @performance.current %>
+<div class="overview-kpis">
+  <% {"clicks" => ["Search clicks", :search], "impressions" => ["Search impressions", :globe]}.each do |metric, (name, icon)| %>
+    <% value = period&.dig(:metrics, metric) %>
+    <article class="overview-kpi"><p><%= ui_icon(icon, size: 16) %><%= name %></p>
+      <strong><%= value.nil? ? "—" : number_with_delimiter(value) %></strong>
+      <% if period %><small><%= period[:start].strftime("%-d %b") %> – <%= compact_date(period[:end]) %></small>
+      <% else %><%= link_to "Check Search Console", search_console_path %><% end %>
+      <% if (difference = period_change(value, @performance.previous&.dig(:metrics, metric))) %><span><%= difference %></span><% end %>
+    </article>
+  <% end %>
+  <article class="overview-kpi"><p><%= ui_icon(:target, size: 16) %>Tracked keywords</p>
+    <strong><%= @work.keyword_count %></strong>
+    <%= link_to rank_icon_text(:arrow_right, "View keyword rankings"), rankings_path %>
+  </article>
+  <% latest_scan = @visibility_map.options.first %>
+  <article class="overview-kpi"><p><%= ui_icon(:map_pin, size: 16) %> Google Maps</p>
+    <% if latest_scan %>
+      <strong class="seo-kpi-date"><%= time_tag latest_scan.last, latest_scan.last.strftime("%-d %b") %></strong>
+      <small>Latest scan · <%= latest_scan[1] %></small>
+      <%= link_to "View saved scans", dashboard_path(anchor: "local-visibility") %>
+    <% else %>
+      <strong>—</strong><%= link_to "Set up Maps reporting", local_falcon_connection_path %>
+    <% end %>
+  </article>
+</div>

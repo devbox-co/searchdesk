@@ -1,14 +1,36 @@
 <% content_for :title, "SEO tasks" %>
-<div class="schedule-view">
-  <header class="rank-heading schedule-page-heading">
+<div class="seo-workflows seo-task-library">
+  <header class="seo-page-heading">
     <div>
+      <p class="seo-site-context"><%= ui_icon(:map_pin, size: 16) %> <%= current_site.name %> · <%= current_site.location %></p>
       <h1>SEO tasks</h1>
-      <p class="rank-intro">Run reports and monitor the evidence available for <%= current_site.name %>.</p>
+      <p>Find templates, see what evidence they need, and review saved results.</p>
     </div>
-    <%= link_to "Workflow setup", setup_seo_workflows_path, class: "button" %>
+    <div class="schedule-actions">
+      <%= link_to "Workflows overview", seo_workflow_overview_path, class: "button" %>
+      <%= link_to "Workflow setup", setup_seo_workflows_path, class: "button" %>
+    </div>
   </header>
+  <nav class="seo-library-nav" aria-label="SEO task catalogue">
+    <% if @runs_needing_review.any? %><%= link_to "Awaiting approval", "#awaiting-approval" %><% end %>
+    <%= link_to "Task templates", "#task-templates" %>
+    <%= link_to "Recent results", "#recent-results" %>
+    <% if workspace_owner? %><%= link_to "Import or export evidence", seo_workflows_path(evidence: "manual", anchor: "workflow-evidence") %><% end %>
+    <%= link_to "Notifications", "#workflow-notifications" %>
+  </nav>
+  <% if @runs_needing_review.any? %>
+    <section class="seo-approval-queue" id="awaiting-approval" aria-labelledby="seo-approvals-heading" tabindex="-1">
+      <div class="seo-section-heading"><h2 id="seo-approvals-heading">Awaiting owner approval</h2></div>
+      <ul class="seo-results" role="list">
+        <% @runs_needing_review.each do |run| %>
+          <li><div><%= link_to run.template.name, seo_workflow_path(run) %>
+            <small>Review by <%= schedule_timestamp(run.review_deadline) %></small></div><%= seo_report_status(run, now: @now) %></li>
+        <% end %>
+      </ul>
+    </section>
+  <% end %>
 
-  <section class="schedule-section">
+  <section class="schedule-section" id="workflow-notifications" tabindex="-1">
     <h2>Notifications</h2>
     <% if workspace_owner? %>
       <% if current_site.seo_workflow_email_owner_id %>
@@ -87,20 +109,42 @@
     </details>
   <% end %>
 
-  <section class="schedule-section">
+  <section class="schedule-section" id="task-templates" tabindex="-1">
     <h2>Task templates</h2>
     <ul class="schedule-list" role="list">
       <% @templates.each do |template| %>
-        <li class="schedule-row" id="task-<%= template.key %>">
-          <div class="schedule-identity">
-            <h3><%= template.name %></h3>
-            <p><%= template.tier.to_s.titleize %> · <%= template.cadence.to_s.humanize %></p>
+        <li class="schedule-row seo-template" id="task-<%= template.key %>">
+          <div class="seo-template-main">
+            <header><%= ui_icon({autonomous: :calendar, queue: :actions, notify: :file_text}.fetch(template.tier), size: 19) %>
+              <h3><%= template.name %></h3>
+              <% if template.available? %>
+                <% scheduled = @scheduled.include?(template.key) %>
+                <%= seo_status(template.cadence == :on_demand ? "On demand" : scheduled ? "Scheduled" : "Schedule off", scheduled ? :good : :idle) %>
+              <% else %>
+                <%= seo_status("Unavailable", :idle) %>
+              <% end %>
+            </header>
+            <p class="seo-template-meta"><%= template.cadence.to_s.humanize %> · <%= {autonomous: "Saved automatically", queue: "Owner approval", notify: "Owner approval and delivery"}.fetch(template.tier) %></p>
             <p><%= template.limitation %></p>
-            <%= link_to "Setup and inputs", setup_seo_workflows_path(anchor: template.key) %>
+            <%= link_to "Setup and inputs", setup_seo_workflows_path(anchor: template.key), class: "seo-text-link" %>
           </div>
           <% if template.available? %>
-            <div class="schedule-actions">
-              <span class="schedule-pill schedule-pill--<%= @scheduled.include?(template.key) ? 'good' : 'idle' %>"><%= @scheduled.include?(template.key) ? "Scheduled" : "Schedule off" %></span>
+            <% report = @latest_by_template[template.key]; schedule = @schedules_by_template[template.key] %>
+            <div class="seo-template-result">
+              <dl class="seo-timing">
+                <div><dt>Latest reporting period</dt><dd>
+                  <% if report %>
+                    <%= link_to schedule_timestamp(report.period_on), seo_workflow_path(report), aria: {label: "View #{template.name} through #{compact_date(report.period_on)}"} %>
+                    <small><%= seo_report_status(report, now: @now) %></small>
+                  <% else %>No report yet<% end %>
+                </dd></div>
+                <div><dt>Next eligible run</dt><dd>
+                  <% if schedule %>
+                    <%= schedule_timestamp(schedule.next_check(now: @now, latest_run: report)) || "At the next background check" %>
+                  <% else %>Manual runs available<% end %>
+                </dd></div>
+              </dl>
+              <div class="schedule-actions">
               <% if workspace_owner? %>
                 <% if template.key == "P1" %>
                   <%= link_to "Live prospect audits", prospect_audits_path, class: "button solid" %>
@@ -129,23 +173,23 @@
                     params: { template: template.key, enabled: enabled ? "0" : "1" }, class: "button") %>
                 <% end %>
               <% end %>
+              </div>
             </div>
-          <% else %>
-            <p>Unavailable</p>
           <% end %>
         </li>
       <% end %>
     </ul>
   </section>
 
-  <section class="schedule-section">
+  <section class="schedule-section" id="recent-results" tabindex="-1">
     <h2>Recent results</h2>
     <% if @runs.empty? %>
       <p>No SEO task has run for this site.</p>
     <% else %>
-      <ul>
+      <ul class="seo-results seo-report-panel" role="list">
         <% @runs.each do |run| %>
-          <li><%= link_to run.template.name, seo_workflow_path(run) %> · through <%= run.period_on %> · <%= run.effective_status.humanize %></li>
+          <li><div><%= link_to run.template.name, seo_workflow_path(run) %>
+            <small>Reporting period through <%= schedule_timestamp(run.period_on) %></small></div><%= seo_report_status(run, now: @now) %></li>
         <% end %>
       </ul>
     <% end %>

@@ -14,6 +14,7 @@ class OverviewsController < ApplicationController
     @visibility_map = LocalFalcon::VisibilityMap.new(site: current_site, through: @today, report_id: params[:map_scan])
     @latest_audit = SiteAudit.where(site: current_site, host: current_site.host).order(created_at: :desc, id: :desc).first
     @latest_brief = AiRun.published_briefs_for(site: current_site, user: current_user, limit: 1).first
-    no_store if @latest_brief
+    @work = SeoWork.new(site: current_site, can_manage: can_manage_site?, owner: workspace_owner?)
+    no_store
   end
 end

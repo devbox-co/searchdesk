@@ -117,11 +117,8 @@ class CompetingPagesController < ApplicationController
   def current_findings
     @connection = current_site.search_console_connection
     @country = SearchConsole::DailyPositions.country_for(current_site)
-    return SiteFinding.none unless @country && SearchConsole::Client.matches?(@connection&.property, current_site.host)
-    return SiteFinding.none unless %w[connected delayed reconnect].include?(@connection.status)
-
-    SiteFinding.current.competing_pages.where(site: current_site, keyword: @keyword || current_site.keywords)
-      .where("evidence->>'property' = ? AND evidence->>'country' = ?", @connection.property, @country)
+    scope = SiteFinding.for_current_search_scope(current_site)
+    @keyword ? scope.where(keyword_id: @keyword.id) : scope
   end
 
   def prepare_detail

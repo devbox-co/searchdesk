@@ -1,6 +1,8 @@
 module ApplicationHelper
   # Each path uses a 24 × 24 viewBox. Labels belong to the adjacent text or control.
   ICON_PATHS = {
+    workflow: "M4 3h6v5H4z M14 16h6v5h-6z M7 8v5a5 5 0 0 0 5 5h2 M11 11l3 3-3 3",
+    clock: "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z M12 7v5l3 2",
     overview: "M3 3h7v8H3z M14 3h7v5h-7z M3 15h7v6H3z M14 12h7v9h-7z",
     audit: "M9 4H5v17h14V4h-4 M9 2h6v4H9z M8 13h2l2-4 2 7 2-3h1",
     rankings: "M3 20h18 M6 16v-5 M12 16V7 M18 16V3",
@@ -46,12 +48,12 @@ module ApplicationHelper
   def workspace_navigation
     [
       [:overview, "Overview", dashboard_path, %w[overviews]],
+      [:workflow, "SEO workflows", seo_workflow_overview_path, %w[seo_workflows prospect_audits]],
       [:rankings, "Rankings", rankings_path, %w[dashboard keywords rank_imports]],
       [:actions, "Actions", actions_path, %w[keyword_actions action_drafts wording_settings competing_pages]],
       [:audit, "Site audit", site_audit_path, %w[site_audits]],
       [:integrations, "Integrations", integrations_path, %w[integrations search_console analytics local_falcon_connections]],
       [:calendar, "Schedules", schedules_path, %w[schedules]],
-      [:calendar, "SEO workflows", setup_seo_workflows_path, %w[seo_workflows prospect_audits]],
       [:sparkles, "Assistant", assistant_path, %w[assistants assistant_settings]],
       [:tasks, "Project tasks", project_tasks_path, %w[project_tasks]],
       [:evidence, "Evidence", source_snapshots_path, %w[source_snapshots project_imports]]

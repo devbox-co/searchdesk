@@ -1,9 +1,9 @@
 <% content_for :title, @run.template.name %>
-<div class="schedule-view">
+<div class="schedule-view seo-workflows">
   <header class="rank-heading schedule-page-heading">
     <div>
       <h1><%= @run.template.name %></h1>
-      <p class="rank-intro">Reporting period through <%= @run.period_on %><% unless @run.template_key == "R3" %> · <%= @run.effective_status.humanize %><% end %></p>
+      <p class="rank-intro">Reporting period through <%= schedule_timestamp(@run.period_on) %> <% unless @run.template_key == "R3" %><%= seo_report_status(@run) %><% end %></p>
     </div>
     <div class="schedule-actions">
       <%= link_to "All SEO tasks", seo_workflows_path, class: "button" %>
@@ -36,6 +36,7 @@
     <% end %>
     <% if evidence_rows.empty? %>
       <p>No eligible saved evidence was available for this reporting period.</p>
+      <%= link_to "See what evidence this task needs", setup_seo_workflows_path(anchor: @run.template_key), class: "seo-text-link" %>
     <% else %>
       <ul>
         <% evidence_rows.each do |row| %>
@@ -85,6 +86,9 @@
   <% if @run.template.tier != :autonomous && @run.result.any? %>
     <section class="schedule-section">
       <h2>Review and delivery</h2>
+      <% if @run.effective_status == "awaiting_approval" %>
+        <p><strong>Review by <%= schedule_timestamp(@run.review_deadline) %></strong></p>
+      <% end %>
       <p>Review the evidence before sharing this report or applying any changes. Use the approved draft for manual publication or email delivery where offered.</p>
       <% if @run.reviewed_at %><p>Decision recorded <%= schedule_timestamp(@run.reviewed_at) %>.</p><% end %>
       <% if @run.delivered_at %><p>Delivery recorded <%= schedule_timestamp(@run.delivered_at) %>.</p><% end %>

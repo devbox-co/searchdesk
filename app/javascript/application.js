@@ -126,6 +126,12 @@ document.addEventListener("click", event => {
   image.src = image.getAttribute("src")
 })
 
+// Back can restore the form selection from before submission. Reset to the rendered scan.
+window.addEventListener("pageshow", () => {
+  const picker = document.querySelector(".lf-picker")
+  if (picker) requestAnimationFrame(() => picker.reset())
+})
+
 // An image may already have finished loading before a Turbo visit or restoration.
 document.addEventListener("turbo:load", () => {
   const image = document.querySelector("[data-lf-street-image]")

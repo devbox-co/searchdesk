@@ -1,0 +1,118 @@
+<% content_for :title, "SEO workflows" %>
+<div class="seo-workflows">
+  <header class="seo-page-heading">
+    <div>
+      <p class="seo-site-context"><%= ui_icon(:map_pin, size: 16) %> <%= current_site.name %> · <%= current_site.location %></p>
+      <h1>SEO workflows</h1>
+      <p>Find the data you need, review what changed and decide what to work on.</p>
+    </div>
+    <div class="schedule-actions">
+      <%= link_to rank_icon_text(:calendar, "View schedules"), schedules_path, class: "button" %>
+      <%= link_to rank_icon_text(:settings, "Workflow setup"), setup_seo_workflows_path, class: "button" %>
+    </div>
+  </header>
+
+  <%= render "stages", path: "", compact: false %>
+  <% health = @worker_health.fetch(:status) %>
+  <div class="seo-workflow-context">
+    <%= seo_status({online: "Background checks online", offline: "Background checks delayed", unknown: "Background check status unavailable"}.fetch(health),
+      {online: :good, offline: :warning, unknown: :idle}.fetch(health)) %>
+    <span><%= ui_icon(:clock, size: 16) %> <%= current_site.time_zone %></span>
+    <% if health == :offline %><%= link_to "Check worker status", schedules_path %><% end %>
+  </div>
+
+  <div class="seo-workflow-steps">
+    <section class="seo-workflow-step seo-stage--collect" id="collect" aria-labelledby="collect-heading" tabindex="-1">
+      <div class="seo-step-heading"><span class="seo-stage-icon"><%= ui_icon(:integrations, size: 23) %></span>
+        <div><h2 id="collect-heading">Get your data</h2><p>Set up the sources that answer the questions you have about local search.</p></div>
+      </div>
+      <div class="seo-source-grid">
+        <%= render "source", row: @work.schedules.fetch("rankings"), icon: :target, title: "Keyword rankings",
+          detail: "See where your website ranks for a service in your town, by device.",
+          links: [[@work.keyword_count.zero? && can_manage_site? ? "Add a keyword" : "View rankings",
+            @work.keyword_count.zero? && can_manage_site? ? new_keyword_path : rankings_path(source: "local")],
+            *(current_site.tracking_mode == "manual" ? [["Manual import guide", integration_path("rank-import")]] : [])] %>
+        <%= render "source", row: @work.schedules.fetch("search-console"), icon: :search, title: "Google Search Console",
+          detail: "Get Google Search clicks, impressions and the pages people saw.",
+          links: [[@work.source_link(@work.schedules.fetch("search-console"), normal_label: "Search Console details"), search_console_path],
+            ["View search performance", dashboard_path(anchor: "search-chart")]] %>
+        <%= render "source", row: @work.schedules.fetch("local-falcon"), icon: :map_pin, title: "Google Maps and Business Profile",
+          detail: "See where your listing appears on Maps and find available profile activity.",
+          links: [[@work.source_link(@work.schedules.fetch("local-falcon"), normal_label: "Local Falcon details"), local_falcon_connection_path],
+            ["View Maps reports", dashboard_path(anchor: "local-visibility")], ["Business Profile", integration_path("google-business-profile")]] %>
+        <%= render "source", row: @work.schedules.fetch("analytics"), icon: :rankings, title: "Google Analytics 4",
+          detail: "See visits from organic search after customers reach your website.",
+          links: [[@work.source_link(@work.schedules.fetch("analytics"), normal_label: "View Analytics"), analytics_path]] %>
+      </div>
+      <% campaigns = @work.schedules.values.select { |row| row[:group] == :external } %>
+      <details class="seo-campaigns">
+        <summary>Provider-run Maps scans</summary>
+        <div class="seo-source-grid">
+          <% campaigns.each do |row| %>
+            <%= render "source", row: row, icon: :calendar, title: row.fetch(:name),
+              detail: "Local Falcon runs the scan. Searchdesk imports the results.",
+              links: [[row.fetch(:link_label), row.fetch(:path)]] %>
+          <% end %>
+        </div>
+      </details>
+      <div class="seo-step-links">
+        <%= link_to rank_icon_text(:evidence, "Browse saved and imported reports"), source_snapshots_path %>
+        <% if can_manage_site? %><%= link_to rank_icon_text(:plus, "Import project records"), new_project_import_path %><% end %>
+        <%= link_to rank_icon_text(:arrow_right, "Review changes next"), "#review" %>
+      </div>
+    </section>
+
+    <section class="seo-workflow-step seo-stage--review" id="review" aria-labelledby="review-heading" tabindex="-1">
+      <div class="seo-step-heading"><span class="seo-stage-icon"><%= ui_icon(:search, size: 23) %></span>
+        <div><h2 id="review-heading">Review changes</h2><p>Open the evidence behind a change before deciding what to edit.</p></div>
+      </div>
+      <div class="seo-source-grid seo-source-grid--analysis">
+        <%= render "source", row: @work.schedules.fetch("competing-pages"), icon: :layers, title: "Competing pages",
+          detail: "Check whether two pages take turns leading for a tracked search and how clicks changed.",
+          links: [["Compare pages", competing_pages_path], ["Search Console setup", search_console_path]] %>
+        <%= render "source", row: @work.schedules.fetch("site_audit"), icon: :audit, title: "Website crawl",
+          detail: "Find pages with crawl, title or link issues.",
+          links: [["View site audit", site_audit_path]] %>
+        <%= render "source", row: @work.schedules.fetch("daily_brief"), icon: :sparkles, title: "Daily SEO brief",
+          detail: "See the latest findings and suggested first step from your saved data.",
+          links: [["Open daily briefs", assistant_path(anchor: "daily-briefs")],
+            *(workspace_owner? ? [["Brief settings", assistant_settings_path(anchor: "site-settings")]] : [])] %>
+      </div>
+      <div class="seo-step-links"><%= link_to rank_icon_text(:arrow_right, "See what to do next"), "#act" %></div>
+    </section>
+
+    <section class="seo-workflow-step seo-stage--act" id="act" aria-labelledby="act-heading" tabindex="-1">
+      <div class="seo-step-heading"><span class="seo-stage-icon"><%= ui_icon(:tasks, size: 23) %></span>
+        <div><h2 id="act-heading">Take action</h2><p>Review a recommendation, record your decision, or pass the work to your team.</p></div>
+      </div>
+      <% if @work.reviews.any? %>
+        <%= render "review_list", items: @work.reviews, show_totals: true %>
+      <% else %>
+        <p class="seo-step-empty">There are no open reviews or actionable project tasks for this site.</p>
+      <% end %>
+      <div class="seo-step-links">
+        <%= link_to rank_icon_text(:file_text, "View SEO reports"), seo_workflows_path(anchor: "recent-results") %>
+        <%= link_to rank_icon_text(:actions, "View recommendations"), actions_path(anchor: "keyword-recommendations") %>
+        <%= link_to rank_icon_text(:tasks, "View project tasks"), project_tasks_path %>
+        <%= link_to rank_icon_text(:trend_up, "Check results in Overview"), dashboard_path(anchor: "visibility-summary") %>
+      </div>
+    </section>
+  </div>
+
+  <section class="seo-overview-section" id="templates" aria-labelledby="templates-heading" tabindex="-1">
+    <div class="seo-section-heading"><h2 id="templates-heading">Templates and handoffs</h2></div>
+    <nav class="seo-tool-grid" aria-label="Templates and handoffs">
+      <% [
+        [:calendar, "SEO task templates", "Find recurring monitors, audits and reports you can run with saved evidence.", seo_workflows_path(anchor: "task-templates")],
+        [:sparkles, "Guided SEO questions", can_manage_site? ? "Choose a question based on the evidence available for this site." : "Read the guided review and its source evidence.", assistant_path(anchor: can_manage_site? ? "question-templates" : "review-heading")],
+        [:file_text, "Keyword action instructions", "Open a recommendation to get steps you can copy and share.", actions_path(anchor: "keyword-recommendations")],
+        [:layers, "Competing-page handoffs", "Open a page comparison to see the available checks and developer instructions.", competing_pages_path]
+      ].each do |icon, title, detail, path| %>
+        <%= link_to path, class: "seo-tool" do %>
+          <%= ui_icon(icon, size: 20) %><span><strong><%= title %></strong><small><%= detail %></small></span>
+          <%= ui_icon(:chevron_right, size: 16) %>
+        <% end %>
+      <% end %>
+    </nav>
+  </section>
+</div>

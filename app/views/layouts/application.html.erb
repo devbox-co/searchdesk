@@ -4,7 +4,7 @@
   <title><%= content_for?(:title) ? "#{yield(:title)} · Searchdesk" : "Searchdesk · SEO workspace" %></title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <%= csrf_meta_tags %><%= csp_meta_tag %>
-  <%= stylesheet_link_tag "/workspace.css", "/rankings.css", "/integration-guide.css", "/assistant.css?v=20261125-3", "/overview.css?v=20261125", "/maps-visibility.css", "/site-audit.css", "/schedules.css", "/action-guide.css?v=3", "/competing-pages.css?v=3", "data-turbo-track": "reload" %>
+  <%= stylesheet_link_tag "/workspace.css", "/rankings.css", "/integration-guide.css", "/assistant.css?v=20261125-3", "/overview.css?v=20261125", "/maps-visibility.css", "/site-audit.css", "/schedules.css", "/seo-work.css", "/action-guide.css?v=3", "/competing-pages.css?v=3", "data-turbo-track": "reload" %>
   <%= javascript_importmap_tags %>
   <meta name="turbo-cache-control" content="no-cache">
 </head>
@@ -19,7 +19,7 @@
         <% navigation.each do |icon, label, path, controllers| %>
           <%= link_to path, class: "nav-#{icon}", aria: { label: label, current: controllers.include?(controller_name) ? "page" : nil } do %>
             <%= ui_icon(icon, size: 20) %>
-            <% if icon == :tasks %><span class="nav-wide-label"><%= label %></span><span class="nav-short-label">Tasks</span>
+            <% if %i[tasks workflow].include?(icon) %><span class="nav-wide-label"><%= label %></span><span class="nav-short-label"><%= icon == :tasks ? "Tasks" : "Workflows" %></span>
             <% else %><span><%= label %></span><% end %>
           <% end %>
         <% end %>
