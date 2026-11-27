@@ -1,35 +1,74 @@
 <% content_for :title, "Overview" %>
-<header class="overview-header">
-  <div><p class="overview-host"><%= ui_icon(:globe, size: 15) %><%= current_site.host %></p>
-    <h1>Visibility overview</h1><p><%= current_site.name %> · <%= @today.strftime("%A, %-d %B %Y") %></p></div>
-  <div class="toolbar"><%= link_to rank_icon_text(:calendar, "View schedules"), schedules_path, class: "button" %>
-    <%= link_to rank_icon_text(:sparkles, "Today’s SEO review"), assistant_path, class: "button overview-assistant" %></div>
-</header>
-<% period = @performance.current %>
-<section class="overview-kpis" aria-label="Visibility summary">
-  <% {"clicks" => ["Search clicks", :search], "impressions" => ["Search impressions", :globe]}.each do |metric, (name, icon)| %>
-    <% value = period&.dig(:metrics, metric) %>
-    <article class="overview-kpi"><p><%= ui_icon(icon, size: 16) %><%= name %></p>
-      <strong><%= value.nil? ? "—" : number_with_delimiter(value) %></strong>
-      <small><%= period ? "#{period[:start].strftime('%-d %b')} – #{compact_date(period[:end])}" : "Awaiting Search Console" %></small>
-      <% if (difference = period_change(value, @performance.previous&.dig(:metrics, metric))) %><span><%= difference %></span><% end %>
-    </article>
+<div class="seo-overview">
+  <header class="seo-page-heading">
+    <div>
+      <p class="seo-site-context"><%= ui_icon(:map_pin, size: 16) %> <%= current_site.name %> · <%= current_site.location %></p>
+      <h1>Visibility overview</h1>
+      <p>See where customers find you and what to work on next.</p>
+    </div>
+    <p class="seo-today"><%= ui_icon(:calendar, size: 16) %> <%= time_tag @today, @today.strftime("%A, %-d %B %Y") %></p>
+  </header>
+
+  <div class="seo-overview-grid">
+    <section class="seo-queue" aria-labelledby="seo-next-heading">
+      <div class="seo-section-heading"><h2 id="seo-next-heading">Next up</h2>
+        <%= link_to "View all work", seo_workflow_overview_path(anchor: "act") %>
+      </div>
+      <% steps = @work.next_steps %>
+      <% if steps.any? %>
+        <%= render "seo_workflows/review_list", items: steps, show_totals: false %>
+      <% else %>
+        <div class="seo-quiet"><%= ui_icon(:check, size: 22) %><div>
+          <h3>No open reviews right now</h3><p>Check your latest reports for changes in search and Maps visibility.</p>
+          <%= link_to "See visibility", "#visibility-summary", class: "seo-text-link" %>
+        </div></div>
+      <% end %>
+    </section>
+
+    <section class="seo-overview-flow" aria-labelledby="seo-flow-heading">
+      <h2 id="seo-flow-heading">SEO workflow</h2>
+      <%= render "seo_workflows/stages", path: seo_workflow_overview_path, compact: true %>
+      <%= link_to seo_workflow_overview_path, class: "seo-flow-link" do %>
+        View workflow and dates <%= ui_icon(:arrow_right, size: 17) %>
+      <% end %>
+    </section>
+  </div>
+
+  <section class="seo-overview-section" id="visibility-summary" aria-labelledby="seo-visibility-heading">
+    <div class="seo-section-heading"><h2 id="seo-visibility-heading">Search and Maps visibility</h2></div>
+    <%= render "visibility_summary" %>
+  </section>
+
+  <section class="seo-overview-section" aria-labelledby="seo-tools-heading">
+    <div class="seo-section-heading"><h2 id="seo-tools-heading">Tools and templates</h2></div>
+    <nav class="seo-tool-grid" aria-label="Tools and templates">
+      <% [
+        [:tasks, "Project tasks", "Find your team’s saved work and its current status.", project_tasks_path],
+        [:layers, "Competing pages", "Compare pages that take turns appearing for a search.", competing_pages_path],
+        [:sparkles, "SEO assistant", "Read daily briefs and ask about saved evidence.", assistant_path],
+        [:file_text, "Templates and reports", "Find recurring SEO tasks, guided questions and developer instructions.", seo_workflow_overview_path(anchor: "templates")],
+        [:audit, "Site audit", "Find crawl issues, broken links and page title problems.", site_audit_path],
+        [:integrations, "Data sources", "Find connections, reports and file import options.", integrations_path]
+      ].each do |icon, title, detail, path| %>
+        <%= link_to path, class: "seo-tool" do %>
+          <%= ui_icon(icon, size: 20) %><span><strong><%= title %></strong><small><%= detail %></small></span>
+          <%= ui_icon(:chevron_right, size: 16) %>
+        <% end %>
+      <% end %>
+    </nav>
+  </section>
+
+  <% if @latest_brief %>
+    <%= render "overviews/daily_brief", brief: @latest_brief %>
   <% end %>
-  <article class="overview-kpi"><p><%= ui_icon(:target, size: 16) %>Tracked keywords</p>
-    <strong><%= current_site.keywords.size %></strong>
-    <%= link_to rank_icon_text(:arrow_right, "View keyword rankings"), rankings_path %>
-  </article>
-</section>
-<% if @latest_brief %>
-  <%= render "overviews/daily_brief", brief: @latest_brief %>
-<% end %>
-<turbo-frame id="overview-filters" target="_top" data-turbo-action="advance" data-filter-frame="<%= current_site.id %>">
-  <div id="local-visibility">
-    <%= render "dashboard/map_visibility", visibility_map: @visibility_map %>
-  </div>
-  <div class="overview-charts">
-    <%= render "overviews/search_chart" %>
-    <%= render "overviews/rank_distribution" %>
-  </div>
-</turbo-frame>
-<%= render "dashboard/site_audit_summary", audit: @latest_audit %>
+  <turbo-frame id="overview-filters" target="_top" data-turbo-action="advance" data-filter-frame="<%= current_site.id %>">
+    <div id="local-visibility">
+      <%= render "dashboard/map_visibility", visibility_map: @visibility_map %>
+    </div>
+    <div class="overview-charts">
+      <%= render "overviews/search_chart" %>
+      <%= render "overviews/rank_distribution" %>
+    </div>
+  </turbo-frame>
+  <%= render "dashboard/site_audit_summary", audit: @latest_audit %>
+</div>

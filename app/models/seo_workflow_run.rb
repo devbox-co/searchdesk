@@ -9,6 +9,11 @@ class SeoWorkflowRun < ApplicationRecord
   REVIEW_WINDOW = 72.hours
   REVIEW_TRANSITIONS = { "approve" => "approved", "reject" => "rejected" }.freeze
 
+  scope :pending_review, ->(now) { where(status: "awaiting_approval").where("updated_at > ?", now - REVIEW_WINDOW) }
+  scope :latest_by_template, -> {
+    select("DISTINCT ON (template_key) seo_workflow_runs.*").order(:template_key, period_on: :desc, id: :desc)
+  }
+
   def self.generate!(site:, template:, day:, now: Time.current)
     raise ArgumentError, "Template is unavailable" unless template.available?
 
@@ -60,8 +65,10 @@ class SeoWorkflowRun < ApplicationRecord
 
   def template = SeoWorkflows::Catalogue.fetch(template_key)
 
+  def review_deadline = updated_at + REVIEW_WINDOW
+
   def effective_status(now: Time.current)
-    if status == "awaiting_approval" && updated_at + REVIEW_WINDOW <= now
+    if status == "awaiting_approval" && review_deadline <= now
       "expired"
     else
       status

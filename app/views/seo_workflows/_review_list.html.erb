@@ -1,0 +1,21 @@
+<ul class="seo-review-list" role="list">
+  <% items.each do |item| %>
+    <li class="seo-review">
+      <span class="seo-review-icon seo-review-icon--<%= item.fetch(:tone) %>"><%= ui_icon(item.fetch(:icon), size: 19) %></span>
+      <div class="seo-review-main">
+        <div class="seo-review-meta"><span><%= item.fetch(:label) %></span><%= seo_status(item.fetch(:status), item.fetch(:tone)) %></div>
+        <h3><%= item.fetch(:title) %></h3>
+        <p><%= item.fetch(:detail) %><% if item[:date] %><span class="seo-date"> · <%= item[:date_label] %> <%= seo_item_date(item[:date]) %></span><% end %></p>
+        <% if item[:deadline] %><p>Review by <%= schedule_timestamp(item[:deadline]) %></p><% end %>
+      </div>
+      <div class="seo-review-links">
+        <%= link_to item.fetch(:path), class: "seo-text-link", aria: { label: "#{item.fetch(:link)}: #{item.fetch(:title)}" } do %>
+          <%= item.fetch(:link) %> <%= ui_icon(:arrow_right, size: 15) %>
+        <% end %>
+        <% if show_totals && item.fetch(:count) > 1 %>
+          <%= link_to "View all #{item.fetch(:count)}", item.fetch(:list_path), aria: { label: "View all #{item.fetch(:count)} · #{item.fetch(:label)}" } %>
+        <% end %>
+      </div>
+    </li>
+  <% end %>
+</ul>

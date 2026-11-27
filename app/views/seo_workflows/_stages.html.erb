@@ -1,0 +1,13 @@
+<nav class="seo-stages<%= " seo-stages--compact" if compact %>" aria-label="Workflow stages">
+  <ol role="list">
+    <% SeoWorkflowsHelper::SEO_STAGES.each do |stage| %>
+      <li class="seo-stage seo-stage--<%= stage.fetch(:id) %>">
+        <%= link_to "#{path}##{stage.fetch(:id)}" do %>
+          <span class="seo-stage-icon"><%= ui_icon(stage.fetch(:icon), size: 20) %></span>
+          <span><strong><%= stage.fetch(:name) %></strong><small><%= stage.fetch(:detail) %></small></span>
+          <%= ui_icon(:chevron_right, size: 16) %>
+        <% end %>
+      </li>
+    <% end %>
+  </ol>
+</nav>

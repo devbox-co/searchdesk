@@ -1,17 +1,30 @@
 class SeoWorkflowsController < ApplicationController
-  before_action :require_workspace_owner, except: %i[index setup show competitor_capture local_services_capture evidence_preview open_rollup_location]
+  before_action :require_workspace_owner, except: %i[overview index setup show competitor_capture local_services_capture evidence_preview open_rollup_location]
   before_action :load_template, only: %i[run schedule]
   before_action :load_run, only: %i[show review refresh_draft record_delivery preview_delivery confirm_delivery cancel_delivery publish]
 
+  def overview
+    now = Time.current
+    @work = SeoWork.new(site: current_site, can_manage: can_manage_site?, owner: workspace_owner?, now: now)
+    @worker_health = Schedules::WorkerMonitor.new(now: now).health
+    no_store
+  end
+
   def index
+    no_store
+    @now = Time.current.in_time_zone(current_site.time_zone)
     @templates = SeoWorkflows::Catalogue::TEMPLATES.values
     @evidence_kind = params[:evidence].presence_in(SeoWorkflows::EvidenceImport::KINDS.keys)
-    @scheduled = current_site.seo_workflow_schedules.pluck(:template_key).to_set
+    schedules = current_site.seo_workflow_schedules.to_a
+    @schedules_by_template = schedules.index_by(&:template_key)
+    @scheduled = @schedules_by_template.keys.to_set
     @notifications = SeoWorkflowNotification.joins(:seo_workflow_run)
       .where(seo_workflow_runs: { site_id: current_site.id, site_host: current_site.host })
       .order(created_at: :desc, id: :desc).limit(15).includes(:seo_workflow_run)
-    @runs = current_site.seo_workflow_runs.where(site_host: current_site.host)
-      .order(created_at: :desc, id: :desc).limit(30)
+    results = current_site.seo_workflow_runs.where(site_host: current_site.host)
+    @runs = results.order(created_at: :desc, id: :desc).limit(30)
+    @latest_by_template = results.latest_by_template.index_by(&:template_key)
+    @runs_needing_review = results.pending_review(@now).order(:updated_at, :id).limit(30)
   end
 
   def setup

@@ -24,10 +24,14 @@
       <% end %>
     </section>
     <% if can_manage_site? %>
-      <section class="panel ai-card ai-ask">
+      <section class="panel ai-card ai-ask" id="question-templates" tabindex="-1">
         <h2><%= ui_icon(:sparkles) %> Explore with AI</h2>
         <% if @can_ask %>
-          <%= render "playbook_questions", playbooks: @playbooks, parent: nil %>
+          <% if @playbooks.any? %>
+            <%= render "playbook_questions", playbooks: @playbooks, parent: nil %>
+          <% else %>
+            <p>Guided questions appear as matching site evidence is saved.</p>
+          <% end %>
           <%= render "composer", parent: nil %>
         <% elsif workspace_owner? %>
           <p><%= ai_account_guidance(ai_connection_label(@connection)) || "Enable the assistant in site settings to start asking questions." %></p>
@@ -49,7 +53,7 @@
       </section>
     <% end %>
   </div>
-  <section class="panel ai-card ai-brief">
+  <section class="panel ai-card ai-brief" id="daily-briefs" tabindex="-1">
     <h2><%= ui_icon(:calendar) %> Daily briefs</h2>
     <p class="ai-meta">Reporting time zone · <%= current_site.time_zone %></p>
     <% if @today_brief && !%w[complete fallback].include?(@today_brief.status) %>

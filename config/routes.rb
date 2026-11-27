@@ -2,6 +2,7 @@ Rails.application.routes.draw do
   get "up", to: "rails/health#show", as: :rails_health_check
   root "overviews#show"
   get "dashboard", to: "overviews#show", as: :dashboard
+  get "seo-workflows", to: "seo_workflows#overview", as: :seo_workflow_overview
   get "schedules", to: "schedules#show", as: :schedules
   get "rankings", to: "dashboard#index", as: :rankings
   get "signup", to: "registrations#new"

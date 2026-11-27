@@ -1,0 +1,23 @@
+<article class="seo-source" data-workflow-key="<%= row.fetch(:key) %>">
+  <header>
+    <div><%= ui_icon(icon, size: 21) %><h3><%= title %></h3></div>
+    <%= seo_status(row.fetch(:status), row.fetch(:tone)) %>
+  </header>
+  <p><%= detail %></p>
+  <dl class="seo-timing">
+    <div><dt>Last recorded activity</dt>
+      <dd><% if row[:last_at] %><%= schedule_timestamp(row[:last_at]) %><small><%= row.fetch(:last_label) %></small>
+        <% else %><%= row.fetch(:last_label) %><% end %></dd></div>
+    <div><dt><%= row[:group] == :external ? "Next provider run" : "Next check" %></dt>
+      <dd><% if row[:next_at] %><%= schedule_timestamp(row[:next_at]) %><small><%= row.fetch(:next_label) %></small>
+        <% else %><%= row.fetch(:next_label) %><% end %></dd></div>
+  </dl>
+  <% if row[:detail].present? %><p class="seo-source-note"><%= row[:detail] %></p><% end %>
+  <div class="seo-source-links">
+    <% links.each do |label, path| %>
+      <%= link_to path, class: "seo-text-link", aria: { label: "#{label} · #{title}" } do %>
+        <%= label %> <%= ui_icon(:arrow_right, size: 15) %>
+      <% end %>
+    <% end %>
+  </div>
+</article>

@@ -4,7 +4,7 @@
     <div><h2 id="map-visibility-heading">Google Maps visibility</h2>
       <p>Local Falcon · <%= current_site.location %></p></div>
     <% if visibility_map.options.any? %>
-      <%= form_with url: dashboard_path(anchor: "maps-visibility"), method: :get, class: "lf-picker" do |form| %>
+      <%= form_with url: dashboard_path(anchor: "maps-visibility"), method: :get, class: "lf-picker", data: { turbo: false } do |form| %>
         <% map_filters.each do |key, value| %><%= hidden_field_tag key, value %><% end %>
         <%= form.label :map_scan, "Keyword and scan date" %>
         <div><%= form.select :map_scan, options_for_select(visibility_map.options.map { |key, term, date| ["#{term} · #{compact_date(date)}", key] }, visibility_map.scan.snapshot.external_id) %>
