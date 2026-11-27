@@ -987,6 +987,19 @@ class SeoLiveProvidersTest < ActionDispatch::IntegrationTest
             "grid_size" => 1, "radius" => 1, "unit" => "mi", "points" => [{ "lat" => 51.0, "lng" => -0.1, "rank" => 5 - index }] })
       end
     end
+    archived = @site.source_snapshots.find_by!(external_id: "785123456789012")
+    archived.update!(scope: "Archived Google Maps evidence.", source_path: "reports/weekly.json",
+      source_url: "https://app.localfalcon.com/reports/view/#{archived.external_id}",
+      metrics: archived.metrics.except("place_id"))
+    wrong_place_grid = archived.map_grid.merge("place_id" => "ChIJotherfixture")
+    archived.update!(map_grid: wrong_place_grid)
+    assert_not LocalFalcon::GeogridExport.scope(@site).exists?(archived.id)
+    archived.update!(map_grid: wrong_place_grid.merge("place_id" => place),
+      source_url: "https://example.test/reports/#{archived.external_id}")
+    assert_not LocalFalcon::GeogridExport.scope(@site).exists?(archived.id)
+    archived.update!(source_url: "https://app.localfalcon.com/reports/view/#{archived.external_id}")
+    assert LocalFalcon::GeogridExport.scope(@site).exists?(archived.id)
+
     report = nil
     travel_to Time.utc(2026, 6, 8, 9) do
       get evidence_preview_seo_workflows_path(template: "R1")

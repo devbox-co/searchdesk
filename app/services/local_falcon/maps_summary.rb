@@ -12,8 +12,22 @@ module LocalFalcon
       profile = Tracking::GooglePlacement.profile_for(site)
       return scan_scope(site).none unless profile
 
-      scan_scope(site).where("metrics->>'place_id' = ?", profile.place_id)
+      scans = scan_scope(site)
+      live = scans.where("metrics->>'place_id' = ?", profile.place_id)
         .where("scope LIKE ?", "Existing Google Maps scan for #{SourceSnapshot.sanitize_sql_like(site.host)}.%")
+      # Older archived reports stored their verified place on the pin grid. Keep the
+      # exact place and report identity checks when reading those saved records.
+      archived = scans.where.not(source_path: [nil, ""]).where(<<~SQL.squish, profile.place_id)
+        metrics->>'place_id' IS NULL AND map_grid->>'place_id' = ?
+        AND source_url = 'https://app.localfalcon.com/reports/view/' || external_id
+        AND map_grid->>'report_key' = external_id
+        AND lower(map_grid->>'keyword') = lower(keyword)
+        AND map_grid->>'date' = observed_on::text
+        AND map_grid->>'grid_size' = metrics->>'grid_size'
+        AND jsonb_typeof(map_grid->'points') = 'array'
+        AND map_grid->'points' <> '[]'::jsonb
+      SQL
+      live.or(archived)
     end
 
     def self.latest(site, through: nil, keywords: [])
