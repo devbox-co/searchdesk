@@ -1,0 +1,92 @@
+#!/bin/sh
+set -eu
+
+revision=$(cat "$(dirname "$0")/../lib/seo_brain/upstream-revision")
+usage() {
+  cat <<'HELP'
+Usage: SEARCHDESK_SEO_BRAIN_REPO=/absolute/checkout bin/seo-brain COMMAND [UPSTREAM ARGS]
+
+Vault:     scaffold, import-source, import-gbp, import-citations, import-reviews,
+           import-geogrid, import-searchdesk, refresh-knowledge
+Review:    synthesize, lint, report, next-action, audit
+Evidence:  evidence, freshness, refresh-queue, coverage
+Demo:      demo, verification, package
+HELP
+}
+
+case "${1:-help}" in
+  help|-h|--help) usage; exit ;;
+  scaffold) script=scaffold_vault ;;
+  import-source) script=ingest_source ;;
+  import-gbp) script=ingest_gbp ;;
+  import-citations) script=ingest_citations ;;
+  import-reviews) script=ingest_reviews ;;
+  import-geogrid) script=ingest_geogrid ;;
+  import-searchdesk) script=searchdesk_import ;;
+  refresh-knowledge) script=ingest_knowledge_base ;;
+  synthesize) script=synthesize_brain ;;
+  lint) script=lint_vault ;;
+  report) script=render_brain_report ;;
+  next-action) script=guide_next_action ;;
+  audit) script=audit_brain ;;
+  evidence) script=evidence_contract ;;
+  freshness) script=evidence_contract; subcommand=freshness ;;
+  refresh-queue) script=evidence_contract; queue=true ;;
+  coverage) script=coverage_matrix ;;
+  demo) script=build_demo_vault ;;
+  verification) script=verification_receipt ;;
+  package) script=package_release ;;
+  *) usage >&2; exit 2 ;;
+esac
+shift
+if [ "${queue:-}" = true ]; then
+  case "${1:-}" in
+    -h|--help) printf '%s\n' 'Usage: bin/seo-brain refresh-queue --as-of YYYY-MM-DD'; exit ;;
+  esac
+  if [ "$#" -ne 2 ] || [ "$1" != "--as-of" ]; then
+    printf '%s\n' 'Usage: bin/seo-brain refresh-queue --as-of YYYY-MM-DD' >&2
+    exit 2
+  fi
+fi
+if [ "$script" = searchdesk_import ] && [ "$#" -eq 1 ]; then
+  case "$1" in
+    -h|--help) printf '%s\n' 'Usage: bin/seo-brain import-searchdesk --vault PATH --file EXPORT --site-host DOMAIN --searchdesk-url ORIGIN --as-of YYYY-MM-DD [--dry-run]'; exit ;;
+  esac
+fi
+if [ -n "${subcommand:-}" ]; then set -- "$subcommand" "$@"; fi
+
+case "${SEARCHDESK_SEO_BRAIN_REPO:-}" in
+  /*) ;;
+  *) printf '%s\n' 'Set SEARCHDESK_SEO_BRAIN_REPO to an absolute Local SEO Brain checkout path.' >&2; exit 2 ;;
+esac
+git -C "$SEARCHDESK_SEO_BRAIN_REPO" cat-file -e "$revision^{commit}" ||
+  { printf '%s\n' "Local SEO Brain checkout is missing pinned revision $revision." >&2; exit 2; }
+
+work=$(mktemp -d "${TMPDIR:-/tmp}/searchdesk-seo-brain.XXXXXX")
+trap 'rm -rf "$work"' EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+case "$script" in
+  audit_brain|verification_receipt|package_release)
+    git init -q "$work/upstream"
+    git -C "$work/upstream" fetch -q --update-shallow --no-tags "$SEARCHDESK_SEO_BRAIN_REPO" "$revision"
+    git -C "$work/upstream" -c advice.detachedHead=false checkout -q FETCH_HEAD
+    ;;
+  *)
+    git -C "$SEARCHDESK_SEO_BRAIN_REPO" archive --format=tar -o "$work/pinned.tar" "$revision"
+    mkdir "$work/upstream"
+    tar -xf "$work/pinned.tar" -C "$work/upstream"
+    ;;
+esac
+if [ "${queue:-}" = true ]; then
+  status=0
+  python3 -E -s -B "$work/upstream/scripts/evidence_contract.py" freshness --as-of "$2" --format json > "$work/freshness.json" || status=$?
+  [ -s "$work/freshness.json" ] || exit "$status"
+  python3 -E -s -B "$(dirname "$0")/seo-brain-refresh-queue.py" "$work/upstream" "$work/freshness.json"
+  exit "$status"
+fi
+if [ "$script" = searchdesk_import ]; then
+  python3 -E -s -B "$(dirname "$0")/seo-brain-import-searchdesk.py" "$work/upstream/scripts" "$@"
+else
+  python3 -E -s -B "$work/upstream/scripts/$script.py" "$@"
+fi

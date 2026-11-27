@@ -1,0 +1,92 @@
+<% content_for :title, "Workflow setup" %>
+<div class="schedule-view">
+  <header class="rank-heading schedule-page-heading">
+    <div>
+      <h1>Workflow setup</h1>
+      <p class="rank-intro">See which inputs are available for <%= current_site.name %>, what to supply, and where to find each result.</p>
+    </div>
+    <%= link_to "Run or schedule tasks", seo_workflows_path, class: "button solid" %>
+  </header>
+
+  <% unless workspace_owner? %>
+    <p>Ask a workspace owner to connect paid providers, import evidence, schedule tasks or approve drafts.</p>
+  <% end %>
+  <% if workspace_owner? %>
+    <details class="schedule-section">
+      <summary>Configure Local SEO Data collection</summary>
+      <p>Set the provider key in the server’s private environment. Bind the provider to this site’s ID and hostname, and allow the task IDs you want to run.</p>
+      <ul>
+        <li>Connection <code>LOCALSEODATA_API_KEY</code>, <code>LOCALSEODATA_SITE_ID</code>, <code>LOCALSEODATA_SITE_HOST</code></li>
+        <li>Tasks <code>LOCALSEODATA_ALLOWED_TASKS</code> and the optional recurring subset <code>LOCALSEODATA_SCHEDULED_TASKS</code></li>
+        <li>M2 and M3 <code>LOCALSEODATA_PLACE_ID</code>, <code>LOCALSEODATA_BUSINESS_NAME</code>, <code>LOCALSEODATA_LOCATION</code></li>
+        <li>M4 <code>LOCALSEODATA_LSA_KEYWORD</code>, <code>LOCALSEODATA_LSA_PHONE</code>, <code>LOCALSEODATA_BUSINESS_NAME</code>, <code>LOCALSEODATA_LOCATION</code></li>
+        <li>E3 <code>LOCALSEODATA_BUSINESS_NAME</code>, <code>LOCALSEODATA_ADDRESS</code>, <code>LOCALSEODATA_PHONE</code></li>
+      </ul>
+      <p>Enable each task’s schedule after the provider is configured and you’ve confirmed the use of credits.</p>
+    </details>
+  <% end %>
+  <ul class="schedule-list workflow-guide" role="list">
+    <% @templates.each do |key, template| %>
+      <% entry = SeoWorkflows::SetupGuide::ENTRIES.fetch(key) %>
+      <li class="schedule-section workflow-guide-task" id="<%= key %>">
+        <h2><%= key %> <%= template.name %></h2>
+        <p><strong><%= @guide.input_label(key) %></strong> · <%= template.cadence.to_s.humanize %>
+          <% if @guide.scheduled.include?(key) %> · <%= @guide.live_schedule?(key) ? "Live schedule on" : "Schedule on for saved evidence" %><% end %>
+        </p>
+        <% if key == "M1" %>
+          <%= render "maps_scan", guide: @guide %>
+        <% end %>
+        <% if key == "M5" %>
+          <%= render "ai_sampling", settings: @guide.ai_settings, samples: @guide.ai_samples %>
+        <% end %>
+        <dl class="facts">
+          <dt>Setup</dt><dd><%= entry.inputs %></dd>
+          <dt>Output</dt><dd><%= entry.output %></dd>
+          <dt>Latest result</dt>
+          <dd>
+            <% if key == "P1" && @guide.prospect %>
+              <%= link_to "Open latest live prospect audit", prospect_audit_path(@guide.prospect) %> · <%= @guide.prospect.website_status.humanize %>
+            <% elsif (run = @guide.results[key]) %>
+              <%= link_to "Open report", seo_workflow_path(run) %> · <%= run.period_on %> · <%= @guide.result_status(run) %>
+            <% else %>
+              No result saved yet.
+            <% end %>
+          </dd>
+        </dl>
+        <% if key == "E4" %>
+          <%= render "page_comparison", samples: @guide.page_comparisons %>
+        <% end %>
+        <% if key == "P2" && @guide.competitor_series.present? %>
+          <%= render "serp_recovery", series: @guide.competitor_series, action_label: "Recover ranking evidence",
+            recovery_path: recover_competitor_evidence_seo_workflows_path %>
+        <% elsif key == "M4" && @guide.local_services_series.present? %>
+          <%= render "serp_recovery", series: @guide.local_services_series, action_label: "Recover Local Services Ads evidence",
+            recovery_path: recover_local_services_evidence_seo_workflows_path %>
+        <% end %>
+        <% if SeoWorkflows::Catalogue::PREVIEW_KEYS.include?(key) %>
+          <%= link_to "Preview current period", evidence_preview_seo_workflows_path(template: key), class: "button" %>
+        <% end %>
+        <% if workspace_owner? %>
+          <div class="schedule-actions">
+            <%= link_to "Manage task", seo_workflows_path(anchor: "task-#{key}"), class: "button" %>
+            <% if entry.action %>
+              <% action_labels = { new_keyword_path: "Add a keyword", integrations_path: "Open integrations",
+                rankings_path: "Open rankings", site_audit_path: "Open site audit",
+                source_snapshots_path: "Open source evidence", seo_workflows_path: "Set location rollup preferences",
+                prospect_audits_path: "Open live prospect audits" } %>
+              <%= link_to action_labels.fetch(entry.action), public_send(entry.action), class: "button" %>
+            <% end %>
+            <% entry.imports.each do |kind| %>
+              <%= link_to "Import #{SeoWorkflows::EvidenceImport::KINDS.fetch(kind).downcase}",
+                seo_workflows_path(evidence: kind, anchor: "workflow-evidence"), class: "button" %>
+            <% end %>
+            <% if %w[E1 E2].include?(key) && BusinessProfileConnection.allowed_for?(current_site) %>
+              <%= link_to(@guide.publish_ready ? "Open Business Profile connection" : "Set up Business Profile publishing",
+                business_profile_path, class: "button") %>
+            <% end %>
+          </div>
+        <% end %>
+      </li>
+    <% end %>
+  </ul>
+</div>

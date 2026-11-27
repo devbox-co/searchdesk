@@ -3,7 +3,7 @@ class KeywordsController < ApplicationController
 
   def show
     @keyword = current_site.keywords.find(params[:id])
-    @device = params[:device] == "mobile" ? "mobile" : "desktop"
+    @device = params[:device] == "desktop" ? "desktop" : "mobile"
     @series = @keyword.tracking_series.current.find_by(device: @device)
     @range = %w[7 30 all].include?(params[:range]) ? params[:range] : "30"
     @slots = []
@@ -16,7 +16,6 @@ class KeywordsController < ApplicationController
     end
     @slots = scope.limit(101).to_a
     @more = @slots.pop if @slots.size > 100
-    @placements = Tracking::PlacementHistory.for_slots(@slots) if @series.source == "dataforseo"
     @placements = Tracking::PlacementHistory.for_slots(@slots) if @series.source == "dataforseo"
   rescue Date::Error
     head :bad_request

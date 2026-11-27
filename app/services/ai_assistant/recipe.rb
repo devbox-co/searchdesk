@@ -1,6 +1,6 @@
 module AiAssistant
   class Recipe
-    VERSIONS = { "question" => "question-v2", "brief" => "brief-v2", "test" => "test-v1" }.freeze
+    VERSIONS = { "question" => "question-v2", "brief" => "brief-v2", "test" => "test-v1", "page_advice" => CompetingPages::Advice::VERSION }.freeze
     CHECKS = {
       "none" => nil,
       "compare_later" => "Compare again after the next complete reading for the same keyword, device and location.",
@@ -42,6 +42,7 @@ module AiAssistant
     end
 
     def self.render(selection, facts, kind:)
+      return CompetingPages::Advice.render(selection, facts) if kind == "page_advice"
       return unless selection.is_a?(Hash) && selection.keys == ["findings"]
       rows = selection["findings"]
       return unless rows.is_a?(Array) && rows.size <= 3
@@ -63,7 +64,8 @@ module AiAssistant
       { "findings" => findings }
     end
 
-    def self.fallback(facts)
+    def self.fallback(facts, kind: nil)
+      return CompetingPages::Advice.fallback(facts) if kind == "page_advice"
       { "findings" => facts.first(3).map { |f| { "text" => f.fetch("text"), "fact_ids" => [f.fetch("id")] } } }
     end
   end

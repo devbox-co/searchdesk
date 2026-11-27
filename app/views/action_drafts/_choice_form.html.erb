@@ -1,0 +1,16 @@
+<%= form_with url: action_draft_choice_path(@action), method: :patch, class: "action-guide-choice", data: {turbo: false} do |form| %>
+  <%= form.hidden_field :draft_id, value: @draft.id %>
+  <fieldset>
+    <legend>Which page should customers land on?</legend>
+    <p>Open both pages above and choose the one that best answers this search.</p>
+    <% SeoSkills::ActionGuide::CHOICE_LABELS.each do |value, label| %>
+      <label class="action-guide-option">
+        <%= form.radio_button :owner_choice, value, checked: @draft.owner_choice == value, required: true %>
+        <span><strong><%= label %></strong><small><%= value == "keep_preferred" ? "Use Searchdesk’s link check to decide whether a website edit would help." : "Prepare instructions to update the preferred page in Searchdesk." %></small></span>
+      </label>
+    <% end %>
+  </fieldset>
+  <%= form.label :owner_choice_note, "Note for your developer or AI agent (optional)" %>
+  <%= form.text_area :owner_choice_note, value: @draft.owner_choice_note, rows: 2, maxlength: 1000 %>
+  <%= form.submit "Save decision and prepare instructions", class: "button solid" %>
+<% end %>

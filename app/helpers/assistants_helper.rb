@@ -39,6 +39,10 @@ module AssistantsHelper
 
   def ai_run_title(run)
     return "OpenAI connection test" if run.kind == "test"
+    if run.kind == "page_advice"
+      review = run.site_finding.evidence
+      return "Page recommendation · #{review.fetch('query')} · #{review.fetch('device').capitalize}"
+    end
     if run.kind == "brief"
       title = "Daily brief · #{run.report_on&.strftime('%d %b %Y')}"
       return run.request_key == "brief/#{run.report_on}/#{run.recipe_version}" ? "#{title} · Updated" : title

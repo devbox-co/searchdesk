@@ -18,7 +18,7 @@
       <div><%= f.date_field :day, value: @day, max: @today, required: true %><%= f.submit "Show", class: "button" %></div>
     <% end %>
   </div>
-  <nav class="rank-device-tabs" id="ranking-devices" aria-label="Ranking device"><% %w[desktop mobile].each do |device| %>
+  <nav class="rank-device-tabs" id="ranking-devices" aria-label="Ranking device"><% %w[mobile desktop].each do |device| %>
     <%= link_to rank_icon_text(device == "mobile" ? :smartphone : :monitor, device.capitalize), rankings_path(source: "local", device: device, day: @day, anchor: "ranking-devices"),
       id: "local-rank-#{device}", data: { turbo_frame: "rankings-filters" }, aria: {current: device == @device ? "page" : nil} %>
   <% end %></nav>
@@ -26,44 +26,18 @@
     <% show_placement = @rows.any? { |row| row[:series].source == "dataforseo" } %>
     <%= render "dashboard/rank_key", features: false %>
     <div class="rank-table-shell" tabindex="0" role="region" aria-label="Keyword rankings">
-      <table role="table" class="rank-table rank-watchlist<%= ' rank-watchlist--placement' if show_placement %>">
-        <thead role="rowgroup">
-          <tr role="row">
-            <th role="columnheader" scope="col">Keyword</th>
-            <% if show_placement %><th role="columnheader" scope="col">Best result on Google</th><% end %>
-            <th role="columnheader" scope="col">Organic rank</th>
-          </tr>
-        </thead>
-        <tbody role="rowgroup">
-          <% @rows.each do |row| %>
-            <tr id="<%= dom_id(row[:series]) %>" role="row">
-              <th role="rowheader" scope="row" class="rank-term">
-                <%= link_to row[:keyword].phrase, keyword_path(row[:keyword], device: @device) %>
-              </th>
-              <% if show_placement %>
-                <td role="cell" data-label="Best result on Google" class="rank-placement">
-                  <%= render "dashboard/google_placement", placement: row[:placement] %>
-                </td>
-              <% end %>
-              <td role="cell" data-label="Organic rank" class="rank-watchlist-organic">
-                <div class="rank-watchlist-reading">
-                  <strong class="<%= row[:rank] ? 'rank-value' : 'rank-unmeasured' %>"><%= rank_value(row[:rank], row[:status]) %></strong>
-                  <% unless row[:transition] == :unavailable %>
-                    <%= rank_change_badge(row[:transition], movement_label(row), show_direction: true) %>
-                  <% end %>
-                </div>
-                <% unless %w[ranked outside].include?(row[:status]) %><small><%= row[:status].to_s.humanize %></small><% end %>
-                <% if row[:winning_url].present? && row.dig(:placement, :current, "type") != "organic" %>
-                  <small><%= rank_page_link(row[:winning_url]) %></small>
-                <% end %>
-                <% if row[:baseline] %>
-                  <small>Started at <%= rank_value(row[:baseline_rank], row[:baseline].status) %> · <%= compact_date(row[:baseline].day) %></small>
-                <% end %>
-                <% if row[:as_of] && row[:as_of] != @day %><small>Last observed <%= compact_date(row[:as_of]) %></small><% end %>
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
+      <table role="table" class="rank-table<%= ' rank-table-with-placement' if show_placement %>"><thead role="rowgroup"><tr role="row"><th role="columnheader" scope="col">Keyword</th><% if show_placement %><th role="columnheader" scope="col">Best result on Google</th><% end %><th role="columnheader" scope="col">Organic start</th><th role="columnheader" scope="col">Organic · <%= compact_date(@day) %></th><th role="columnheader" scope="col">Organic movement</th></tr></thead>
+        <tbody role="rowgroup"><% @rows.each do |row| %><tr id="<%= dom_id(row[:series]) %>" role="row">
+          <th role="rowheader" scope="row" class="rank-term"><%= link_to row[:keyword].phrase, keyword_path(row[:keyword], device: @device) %>
+            <% if row[:winning_url].present? && row.dig(:placement, :current, "type") != "organic" %><span class="rank-sub">Ranking page · <%= rank_page_link(row[:winning_url]) %></span><% end %></th>
+          <% if show_placement %><td role="cell" data-label="Best result on Google" class="rank-placement"><%= render "dashboard/google_placement", placement: row[:placement] %></td><% end %>
+          <td role="cell" data-label="Organic start"><span class="rank-value"><%= rank_value(row[:baseline_rank], row[:baseline]&.status, fallback: "Awaiting start") %></span>
+            <% if row[:baseline] %><small><%= compact_date(row[:baseline].day) %></small><% end %></td>
+          <td role="cell" data-label="Organic rank"><strong class="rank-value"><%= rank_value(row[:rank], row[:status]) %></strong>
+            <% unless %w[ranked outside].include?(row[:status]) %><small><%= row[:status].to_s.humanize %></small><% end %>
+            <% if row[:as_of] && row[:as_of] != @day %><small>Last observed <%= compact_date(row[:as_of]) %></small><% end %></td>
+          <td role="cell" data-label="Organic movement"><%= rank_change_badge(row[:transition], movement_label(row)) %></td>
+        </tr><% end %></tbody>
       </table>
     </div>
   <% end %>

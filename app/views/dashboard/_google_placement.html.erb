@@ -1,43 +1,33 @@
 <% current = placement&.fetch(:current) %>
 <% if current.nil? %>
-  <span class="rank-unmeasured">No comparable result</span>
+  <span class="rank-sub">No comparable result</span>
 <% else %>
   <% if current["position"] %>
-    <div class="rank-watchlist-reading rank-placement-reading">
-      <strong class="rank-value">#<%= current["position"] %></strong>
-      <div>
-        <% if current["type"] == "local_pack" %>
-          <%= rank_feature_badge("Local pack", show_label: true) %>
-          <small><%= link_to current["profile_name"], "https://www.google.com/maps/search/?#{ {api: 1, query: current["profile_name"], query_place_id: current["place_id"]}.to_query }",
-            target: "_blank", rel: "noopener noreferrer" %></small>
-        <% else %>
-          <span class="rank-placement-type">Organic result</span>
-          <small><%= rank_page_link(current["url"]) %></small>
-        <% end %>
-      </div>
-    </div>
+    <strong class="rank-value">#<%= current["position"] %></strong>
+    <% if current["type"] == "local_pack" %>
+      <%= rank_feature_badge("Local pack", show_label: true) %>
+      <small><%= link_to current["profile_name"], "https://www.google.com/maps/search/?#{ {api: 1, query: current["profile_name"], query_place_id: current["place_id"]}.to_query }",
+        target: "_blank", rel: "noopener noreferrer" %></small>
+    <% else %>
+      <span class="rank-placement-type">Organic</span>
+      <small><%= rank_page_link(current["url"]) %></small>
+    <% end %>
   <% else %>
     <strong>Outside tracked results</strong>
   <% end %>
-  <% previous, baseline = placement.values_at(:previous, :baseline)
-    comparisons = if previous && previous == baseline
-      [["Since last check and start", previous]]
-    else
-      [["Since last check", previous], ["Since start", baseline]]
-    end %>
   <dl class="rank-placement-comparisons">
-    <% comparisons.each do |label, comparison| %>
+    <% [["Since last check", placement[:previous]], ["Since start", placement[:baseline]]].each do |label, comparison| %>
       <div>
         <dt><%= label %></dt>
         <dd>
           <% if comparison %>
             <% state = comparison.fetch(:transition)
               text = { entered: "Entered tracked results", left: "Left tracked results", outside_both: "Outside both checks" }.fetch(state) { movement_label(comparison) } %>
-            <%= rank_change_badge(state, text, show_direction: true) %>
+            <%= rank_change_badge(state, text) %>
             <small><%= compact_date(comparison[:day]) %><%= " · ##{comparison[:position]}" if comparison[:position] && state != :baseline %></small>
-            <% if comparison[:type_changed] %><small><%= current["type"] == "local_pack" ? "From organic result" : "From local pack" %></small><% end %>
+            <% if comparison[:type_changed] %><small><%= current["type"] == "local_pack" ? "Now in local pack" : "Now organic" %></small><% end %>
           <% else %>
-            <span class="rank-unmeasured">No prior check</span>
+            <span class="rank-sub">No prior check</span>
           <% end %>
         </dd>
       </div>

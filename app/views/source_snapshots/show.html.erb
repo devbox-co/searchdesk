@@ -3,14 +3,76 @@
   <p class="eyebrow"><%= @snapshot.provider %> · <%= compact_date(@snapshot.observed_on) %></p><h1><%= @snapshot.title %></h1>
   <h2>Scope</h2><p><%= @snapshot.scope %></p>
   <% if @snapshot.keyword.present? %><p>Keyword · <%= link_to @snapshot.keyword, source_snapshots_path(keyword: @snapshot.keyword) %></p><% end %>
-  <h2>Reported metrics</h2><p>These values use the source and scope shown above.</p>
-  <% if @snapshot.metrics.empty? %><p>No numerical metrics were provided with this record.</p><% end %>
-  <dl class="facts">
-    <% @snapshot.metrics.each do |label, value| %>
-      <dt><%= label.humanize %></dt>
-      <dd><% if value.is_a?(Hash) || value.is_a?(Array) %><pre><%= JSON.pretty_generate(value) %></pre><% else %><%= value.nil? ? "Not reported" : value.to_s %><% end %></dd>
+  <% if @maps_grid %>
+    <p><%= link_to "Open Google Maps grid", dashboard_path(map_scan: @snapshot.external_id, anchor: "maps-visibility"), class: "button" %>
+      <% if workspace_owner? %><%= link_to "Download grid CSV for Local SEO Brain", geogrid_source_snapshot_path(@snapshot), class: "button" %><% end %></p>
+  <% end %>
+  <% if @maps_scan_request %>
+    <h2>Google Maps scan request</h2>
+    <p><%= LocalFalcon::ScanCollection.status_text(@snapshot) %></p>
+    <p><%= @snapshot.metrics.fetch("size") %> × <%= @snapshot.metrics.fetch("size") %> grid ·
+      <%= @snapshot.metrics.fetch("radius") %> mile radius · <%= @snapshot.metrics.fetch("credits") %> approved credits.</p>
+    <% if @snapshot.metrics["report_key"] %><p>Local Falcon report key · <%= @snapshot.metrics.fetch("report_key") %></p><% end %>
+    <% if (saved = @snapshot.metrics["snapshot_id"]) %><%= link_to "View saved grid", source_snapshot_path(saved), class: "button" %><% end %>
+    <%= link_to "Return to M1 setup", setup_seo_workflows_path(anchor: "M1") %>
+  <% elsif @profile_monitor %>
+    <h2>Business Profile reading</h2>
+    <p><%= @snapshot.metrics.fetch("state").humanize %><%= " · Sandbox" if @snapshot.metrics["sandbox"] %></p>
+    <% if (fields = @snapshot.metrics["fields"]) %>
+      <dl class="facts">
+        <% LocalSeoData::BusinessProfile::LABELS.each do |key, label| %>
+          <dt><%= label %></dt>
+          <dd><% if fields.key?(key) %><%= fields.fetch(key).fetch("present") ? "Value returned" : "Returned empty" %><% else %>Unavailable<% end %></dd>
+        <% end %>
+      </dl>
     <% end %>
-  </dl>
+  <% elsif @ai_sample %>
+    <h2>AI response sample</h2>
+    <p><%= SeoWorkflows::AiVisibilitySample.status_text(@snapshot) %></p>
+    <dl class="facts">
+      <dt>Model</dt><dd><%= @snapshot.metrics.fetch("model") %></dd>
+      <dt>Country</dt><dd><%= @snapshot.metrics.fetch("country") %></dd>
+      <% if @snapshot.metrics["location"] %>
+        <dt>Search market</dt><dd><%= @snapshot.metrics.fetch("location") %></dd>
+        <% if @snapshot.metrics["device"] %><dt>Device</dt><dd><%= @snapshot.metrics.fetch("device").humanize %></dd><% end %>
+      <% end %>
+    </dl>
+  <% elsif @page_comparison %>
+    <%= render "page_comparison", comparison: @snapshot %>
+  <% elsif @citation_import %>
+    <h2>Directory checks</h2>
+    <ul>
+      <% @snapshot.metrics.fetch("records").each do |record| %>
+        <li>
+          <strong><%= record.fetch("directory") %></strong> · Priority <%= record.fetch("tier") %>
+          <% if record["unverified"] %>
+            <p>Listing presence unverified.</p>
+          <% elsif record.fetch("issues").any? %>
+            <p><%= record.fetch("issues").map(&:humanize).join(", ") %>.</p>
+          <% elsif record["unverified_fields"].blank? %>
+            <p>No issues recorded.</p>
+          <% end %>
+          <% if record["unverified_fields"].present? %>
+            <p>Unverified fields · <%= record.fetch("unverified_fields").join(", ") %></p>
+          <% end %>
+          <% Array(record["listing_urls"]).each_with_index do |url, index| %>
+            <%= link_to "Open source #{index + 1} ↗", url, target: "_blank", rel: "noopener noreferrer" %>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  <% elsif @dedicated_lsa %>
+    <%= render "dedicated_lsa", sample: @snapshot.metrics %>
+  <% else %>
+    <h2>Reported metrics</h2><p>These values use the source and scope shown above.</p>
+    <% if @snapshot.metrics.empty? %><p>No numerical metrics were provided with this record.</p><% end %>
+    <dl class="facts">
+      <% (@data_for_seo_reviews ? @snapshot.metrics.except("task_id") : @snapshot.metrics).each do |label, value| %>
+        <dt><%= label.humanize %></dt>
+        <dd><% if value.is_a?(Hash) || value.is_a?(Array) %><pre><%= JSON.pretty_generate(value) %></pre><% else %><%= value.nil? ? "Not reported" : value.to_s %><% end %></dd>
+      <% end %>
+    </dl>
+  <% end %>
   <h2>Source reference</h2><p><%= @snapshot.external_id %></p>
   <% if @snapshot.source_path.present? %><p class="source-reference"><%= @snapshot.source_path %></p><% end %>
   <% if @snapshot.source_url.present? %><%= link_to "Open source ↗", @snapshot.source_url, target: "_blank", rel: "noopener noreferrer", class: "button" %><% end %>

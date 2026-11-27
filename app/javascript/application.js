@@ -131,3 +131,36 @@ document.addEventListener("turbo:load", () => {
   const image = document.querySelector("[data-lf-street-image]")
   if (image) updateStreetMap(image)
 })
+
+// Native submission preserves the link-check fragment in the server redirect.
+document.addEventListener("submit", event => {
+  if (!event.target.matches(".action-link-check-form, .cp-advice-form, .cp-listing-form")) return
+  const progress = event.target.nextElementSibling
+  if (progress?.matches("[data-review-progress]")) progress.hidden = false
+})
+window.addEventListener("pageshow", () => {
+  document.querySelectorAll("[data-review-progress]").forEach(progress => { progress.hidden = true })
+})
+
+// The request remains ordinary selectable text when clipboard access is unavailable.
+document.addEventListener("turbo:load", () => {
+  document.querySelectorAll("[data-copy-handoff]").forEach(button => { button.hidden = false })
+})
+
+document.addEventListener("click", async event => {
+  const button = event.target.closest?.("[data-copy-handoff]")
+  if (!button) return
+  const section = button.closest("section")
+  const request = section.querySelector("[data-action-handoff]")
+  const status = section.querySelector("[data-copy-status]")
+  try {
+    await navigator.clipboard.writeText(request.value)
+    status.textContent = "Instructions copied."
+  } catch {
+    const details = request.closest("details")
+    if (details) details.open = true
+    request.focus()
+    request.select()
+    status.textContent = "Text selected. Use your device’s Copy command."
+  }
+})

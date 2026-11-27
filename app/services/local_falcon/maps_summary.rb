@@ -8,6 +8,14 @@ module LocalFalcon
         .where("metrics->>'platform' = 'google' OR (metrics->>'platform' IS NULL AND scope ILIKE '%Google Maps%')")
     end
 
+    def self.verified_scan_scope(site)
+      profile = Tracking::GooglePlacement.profile_for(site)
+      return scan_scope(site).none unless profile
+
+      scan_scope(site).where("metrics->>'place_id' = ?", profile.place_id)
+        .where("scope LIKE ?", "Existing Google Maps scan for #{SourceSnapshot.sanitize_sql_like(site.host)}.%")
+    end
+
     def self.latest(site, through: nil, keywords: [])
       scans = scan_scope(site)
       scans = scans.where(observed_on: ..through) if through
@@ -35,6 +43,11 @@ module LocalFalcon
       distance = Float(@metrics["radius_miles"] || @metrics["radius"], exception: false)
       unit = @metrics.key?("radius_miles") ? "mi" : @metrics["distance_unit"]
       [distance, unit] if distance&.finite? && distance.positive? && %w[mi km].include?(unit)
+    end
+
+    def average_rank
+      position = Float(@metrics["arp"], exception: false)
+      position if position&.finite? && position >= 1
     end
 
     def share

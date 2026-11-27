@@ -62,20 +62,36 @@ module LocalFalcon
 
     def read(tool, args)
       raise Error, "Unsupported Local Falcon operation." unless READ_TOOLS.include?(tool)
-      result, = call_rpc("tools/call", { name: tool, arguments: args })
-      raise ToolError, "Local Falcon could not read the requested record." if result["isError"]
-      # Hosted tools may return structuredContent or a JSON text content block.
-      data = result["structuredContent"]
-      data = JSON.parse(result.fetch("content").detect { |v| v["type"] == "text" }.fetch("text")) unless data.is_a?(Hash)
-      raise ToolError, "Local Falcon could not read the requested record." if data["success"] == false
-      data = data.fetch("data") if data.key?("success")
+
+      data = tool_data(tool, args)
+      data = data.fetch("data", data) if data.key?("success")
       raise Error, "Local Falcon returned invalid report data." unless data.is_a?(Hash)
+      data
+    end
+
+    def submit_google_scan(place:, keyword:, size:, radius:, center:)
+      data = tool_data("runLocalFalconScan", { placeId: place, keyword: keyword, gridSize: size.to_s,
+        radius: radius, measurement: "mi", lat: center.first, lng: center.last, platform: "google", aiAnalysis: false })
+      key = data["report_key"] || data.dig("data", "report_key")
+      unless data["success"] == true && ReportReader::REPORT_KEY.match?(key.to_s)
+        raise Error, "Local Falcon did not confirm the scan reference."
+      end
+      key
+    end
+
+    private
+
+    def tool_data(tool, args)
+      result, = call_rpc("tools/call", { name: tool, arguments: args })
+      raise ToolError, "Local Falcon could not complete this operation." if result["isError"]
+      data = result["structuredContent"]
+      data = JSON.parse(result.fetch("content").find { |value| value["type"] == "text" }.fetch("text")) unless data.is_a?(Hash)
+      raise Error, "Local Falcon returned invalid report data." unless data.is_a?(Hash)
+      raise ToolError, "Local Falcon could not complete this operation." if data["success"] == false
       data
     rescue JSON::ParserError, KeyError, NoMethodError, TypeError
       raise Error, "Local Falcon returned invalid report data."
     end
-
-    private
 
     def call_rpc(method, params, notification: false)
       rpc = { jsonrpc: "2.0", method: method }

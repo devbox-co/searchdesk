@@ -1,4 +1,13 @@
 default: &default
+  seo_workflow_notifications:
+    class: SeoWorkflowNotificationsJob
+    schedule: every 15 minutes
+  seo_workflow_schedules:
+    class: SeoWorkflowScheduleJob
+    schedule: every 15 minutes
+  prospect_audit_recovery:
+    class: ProspectAuditRecoveryJob
+    schedule: every 10 minutes
   site_audit_recovery:
     class: SiteAuditRecoveryJob
     schedule: every 10 minutes

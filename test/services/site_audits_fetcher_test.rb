@@ -22,12 +22,15 @@ class SiteAuditsFetcherTest < ActiveSupport::TestCase
     end
   end
 
-  def fetcher(ips:, status: 302, type: "text/html")
+  def fetcher(ips:, status: 302, type: "text/html", body: nil)
     resolver = Object.new
     resolver.define_singleton_method(:getaddrinfo) { |*| ips.map { |ip| Addrinfo.ip(ip) } }
     response = Net::HTTPResponse.new("1.1", status.to_s, "Fixture")
     response["Content-Type"] = type
-    response.define_singleton_method(:read_body) { raise "Skipped body was read" }
+    response.define_singleton_method(:read_body) do |&block|
+      raise "Skipped body was read" if body.nil?
+      block.call(body)
+    end
     @http = TransportSpy.new(response)
     SiteAudits::Fetcher.new(resolver: resolver, transport: @http)
   end
@@ -41,6 +44,13 @@ class SiteAuditsFetcherTest < ActiveSupport::TestCase
     assert_equal "/catalogue", @http.request_seen.path
     assert_equal "", result.body
     assert_nil @http.response_completed
+  end
+
+  test "retains the transport charset for metadata with non-UTF-8 punctuation" do
+    bytes = "<title>Café</title>".encode("Windows-1252").b
+    result = fetcher(ips: ["8.8.8.8"], status: 200, type: 'text/html; charset="windows-1252"', body: bytes).get(URI("https://example.test/"))
+    assert_equal "Windows-1252", result.body.encoding.name
+    assert_equal "<title>Café</title>", result.body.encode("UTF-8")
   end
 
   test "mixed DNS answers reject the entire request before opening a socket" do

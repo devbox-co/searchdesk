@@ -20,8 +20,9 @@ class AssistantsController < ApplicationController
       example = matches.find { |fact| fact.fetch("url").to_s.include?("#") } || matches.first
       [playbook, example]
     end
-    @history = AiRun.where(site: current_site, kind: "question", user: current_user)
-      .order(created_at: :desc, id: :desc).limit(40).select { |run| run.visible_to?(user: current_user) }.first(12)
+    @history = AiRun.where(site: current_site, kind: %w[question page_advice], user: current_user, erased_at: nil)
+      .order(created_at: :desc, id: :desc).limit(40).select { |run| run.visible_to?(user: current_user) }
+      .uniq { |run| run.kind == "page_advice" ? run.page_advice_digest : run.id }.first(12)
     @briefs = AiRun.published_briefs_for(site: current_site, user: current_user)
     if workspace_owner?
       current = AiRun.where(site: current_site, kind: "brief", report_on: @review_day, erased_at: nil).order(id: :desc).first
@@ -60,6 +61,9 @@ class AssistantsController < ApplicationController
 
   def run
     @run = visible_run(params[:id])
+    if @run.kind == "page_advice"
+      return redirect_to competing_page_path(@run.site_finding_id, anchor: "ai-recommendation")
+    end
     if @can_ask && @run.kind != "test" && %w[complete fallback].include?(@run.status)
       @playbooks = AiAssistant::Playbooks.for_facts(cited_facts(@run)).reject { |book| book.question == @run.question }
       @review_day = review_day_for(@run)
@@ -68,10 +72,14 @@ class AssistantsController < ApplicationController
 
   def erase
     run = visible_run(params[:id])
-    return head :forbidden unless workspace_owner? || (run.kind == "question" && run.user_id == current_user.id)
+    return head :forbidden unless workspace_owner? || (%w[question page_advice].include?(run.kind) && run.user_id == current_user.id)
 
     run.erase_content!
-    redirect_to assistant_path, notice: "Removed the saved content and its follow-ups.", status: :see_other
+    if run.kind == "page_advice"
+      redirect_to competing_page_path(run.site_finding_id, anchor: "ai-recommendation"), notice: "Removed your saved recommendation.", status: :see_other
+    else
+      redirect_to assistant_path, notice: "Removed the saved content and its follow-ups.", status: :see_other
+    end
   end
 
   def clear

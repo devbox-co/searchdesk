@@ -1,5 +1,11 @@
 class AiBriefScheduleJob < ApplicationJob
   TERMINAL_SLOT_STATES = %w[ranked outside incomplete failed missing].freeze
+  INTERRUPTED_AFTER = 10.minutes
+
+  def self.close_interrupted(scope, now: Time.current)
+    scope.where(status: "running", attempted_at: ...(now - INTERRUPTED_AFTER))
+      .update_all(status: "failed", failure_code: "uncertain", finished_at: now, updated_at: now)
+  end
 
   def perform
     recover_jobs
@@ -34,8 +40,7 @@ class AiBriefScheduleJob < ApplicationJob
 
   def recover_jobs
     now = Time.current
-    AiRun.where(status: "running", attempted_at: ...10.minutes.ago)
-      .update_all(status: "failed", failure_code: "uncertain", finished_at: now, updated_at: now)
+    self.class.close_interrupted(AiRun.all, now: now)
     AiRun.where(status: "pending", created_at: ...AiRunJob::MAX_PENDING_AGE.ago)
       .update_all(status: "expired", failure_code: "stale", actual_microusd: 0, finished_at: now, updated_at: now)
     # Recover a commit followed by a queue outage. The worker's durable reservation deduplicates deliveries.

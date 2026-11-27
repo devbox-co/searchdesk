@@ -57,6 +57,7 @@
         </fieldset>
         <fieldset><legend>Additional facts to share with OpenAI</legend>
           <label class="ai-check"><%= f.check_box :share_google %><span>Google Search Console and GA4 reporting metrics</span></label>
+          <p class="hint">On a competing-pages review, you can ask for an AI recommendation using that keyword’s weekly Search Console results. It uses your workspace allowance. Reading a saved recommendation is free.</p>
           <label class="ai-check"><%= f.check_box :share_maps %><span>Local Falcon Maps grid summaries</span></label>
           <label class="ai-check"><%= f.check_box :share_semrush %><span>Imported Semrush campaign rankings</span></label>
         </fieldset>

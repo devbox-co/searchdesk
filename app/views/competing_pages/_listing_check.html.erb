@@ -1,0 +1,88 @@
+<% receipt = @listing_receipt %>
+<section class="cp-card cp-listing" id="listing-check" tabindex="-1" aria-labelledby="listing-heading">
+  <h2 id="listing-heading">What Google showed</h2>
+  <% unless receipt %>
+    <p>Compare the latest saved <%= @evidence.fetch("device") %> search result for “<%= @evidence.fetch("query") %>” with the title and description on your <%= competition_pair_link(@listing_target, @pair) %>.</p>
+  <% end %>
+  <% if receipt %>
+    <% google, page, draft = receipt.values_at("google", "page", "draft") %>
+    <% target_name = competition_path_label(receipt.fetch("target_url")) %>
+    <% result = google["status"] == "observed" ? google : google["other_result"] %>
+    <% if google["status"] == "target_not_seen" %>
+      <p class="cp-outcome"><%= target_name %> did not appear in the results checked.</p>
+    <% elsif google["status"] == "observed" %>
+      <p class="cp-outcome">Google showed <%= target_name %> for this search.</p>
+    <% else %>
+      <p class="cp-outcome">The Google result is unavailable for this check.</p>
+    <% end %>
+    <div class="cp-listing-sources">
+      <section class="cp-listing-source" aria-labelledby="listing-google">
+        <h3 id="listing-google"><%= google["status"] == "target_not_seen" && result ? "Another page Google showed from your site" : "Google search result" %></h3>
+        <p class="cp-note">“<%= @evidence.fetch("query") %>” · <%= listing_search_scope(google, @evidence.fetch("device")) %></p>
+        <% if google["captured_at"].present? %><p class="cp-note">Result captured <%= listing_check_time(google["captured_at"]) %></p><% end %>
+        <% if result %>
+          <p class="cp-listing-url"><% if result["position"].present? %><strong>Position <%= result["position"] %></strong> · <% end %><%= listing_page_link(result["url"]) %></p>
+          <%= render "listing_fields", source: result, google: true %>
+          <% if @article_receipt %>
+            <p><%= link_to "Read the ranking page review", "#ranking-article", data: {turbo: false} %></p>
+          <% elsif @article_candidate && can_manage_site? %>
+            <%= render "article_check_form", label: "Check this ranking page" %>
+          <% end %>
+        <% end %>
+        <% if google["reason"].present? %><p class="cp-note"><%= google["reason"] %></p><% end %>
+        <% if google["coverage"].to_i.positive? %>
+          <p class="cp-note">Checked organic positions 1–<%= google["coverage"] %><%= " of #{google['depth']} requested" if google["depth"].to_i > google["coverage"].to_i %>.</p>
+        <% end %>
+        <% if google["source"].present? %><p class="cp-note">Source · <%= google["source"] %></p><% end %>
+      </section>
+      <section class="cp-listing-source" aria-labelledby="listing-page">
+        <h3 id="listing-page">On your page · <%= target_name %></h3>
+        <% if page["checked_at"].present? %><p class="cp-note">Page checked <%= listing_check_time(page["checked_at"]) %></p><% end %>
+        <p class="cp-listing-url"><%= listing_page_link(page["url"].presence || receipt.fetch("target_url")) %></p>
+        <% if page["status"] == "observed" %>
+          <%= render "listing_fields", source: page, google: false %>
+        <% else %>
+          <p>Page text unavailable.</p>
+        <% end %>
+        <% if page["reason"].present? %><p class="cp-note"><%= page["reason"] %></p><% end %>
+      </section>
+    </div>
+    <% if google["status"] == "target_not_seen" %>
+      <p><%= target_name == "Homepage" ? "No homepage snippet to compare in this capture." : "No snippet for the chosen page to compare in this capture." %></p>
+      <% if (previous = google["previous_result"]).present? %>
+        <details class="cp-advice-evidence">
+          <summary>Earlier Google result for <%= target_name %></summary>
+          <p class="cp-note">Captured <%= listing_check_time(previous["captured_at"]) %> · Position <%= previous["position"] %></p>
+          <p class="cp-listing-url"><%= listing_page_link(previous["url"]) %></p>
+          <%= render "listing_fields", source: previous, google: true %>
+        </details>
+      <% end %>
+    <% elsif google["status"] == "observed" && page["status"] == "observed" %>
+      <p><%= %w[title description].map { |field| listing_field_comparison(field, receipt.fetch("comparison")) }.join(" ") %></p>
+    <% else %>
+      <p>A comparison needs both the Google result for this page and the page’s own text.</p>
+    <% end %>
+    <section class="cp-listing-advice" aria-labelledby="listing-draft">
+      <h3 id="listing-draft"><%= {"proposed" => "Suggested wording", "keep" => "Keep the current wording"}.fetch(draft["status"], "Next step") %></h3>
+      <p><%= draft["reason"] %></p>
+      <% if draft["guidance_url"].to_s.start_with?("https://www.asa.org.uk/") %>
+        <p><%= link_to "Read UK advertising guidance", draft["guidance_url"], target: "_blank", rel: "noopener noreferrer" %></p>
+      <% end %>
+      <% if draft["status"] == "proposed" %>
+        <dl class="cp-listing-fields">
+          <% if draft["title"].present? %><dt><%= draft["title"] == page["title"] ? "Keep this title" : "Suggested title" %></dt><dd><%= draft["title"] %></dd><% end %>
+          <% if draft["description"].present? %><dt><%= draft["description"] == page["description"] ? "Keep this description" : "Suggested description" %></dt><dd><%= draft["description"] %></dd><% end %>
+        </dl>
+        <p class="cp-note">Google chooses the title and snippet for each search and may use different wording.</p>
+      <% end %>
+      <% if draft["instructions"].present? %>
+        <%= render "developer_handoff", field_id: "listing-handoff", instructions: draft["instructions"], button_label: "Copy developer instructions" %>
+      <% end %>
+    </section>
+  <% end %>
+  <% if can_manage_site? %>
+    <%= button_to(receipt ? "Check again" : "Check Google result", listing_check_competing_page_path(@finding, keyword_id: @keyword&.id),
+      params: {version: @finding.updated_at.iso8601(6)}, class: "button", form_class: "cp-listing-form", form: {data: {turbo: false}}) %>
+    <span class="cp-note" role="status" data-review-progress hidden>Checking the saved search result and reading your page…</span>
+  <% end %>
+</section>

@@ -1,0 +1,20 @@
+<%= link_to "← E4 Workflow setup", setup_seo_workflows_path(anchor: "E4"), class: "back" %>
+<p><%= SeoWorkflows::PageComparison.status_text(comparison) %></p>
+<% SeoWorkflows::PageComparison::SIDES.each do |key, label| %>
+  <% page = comparison.metrics.dig("pages", key) %>
+  <h2><%= label %></h2>
+  <p><%= link_to "Open #{label.downcase} ↗", page&.fetch("url") || comparison.metrics.fetch("urls").fetch(key),
+    target: "_blank", rel: "noopener noreferrer" %></p>
+  <% if page&.fetch("status") == "observed" %>
+    <dl class="facts">
+      <% { "title" => "Page title", "description" => "Meta description", "h1" => "Main heading (H1)" }.each do |field, title| %>
+        <dt><%= title %></dt><dd><%= page.fetch("fields").fetch(field).humanize %></dd>
+      <% end %>
+      <dt>Main content word count (approximate)</dt><dd><%= page.fetch("main_words", "Unavailable") %></dd>
+      <dt>Main content H2 and H3 count</dt><dd><%= page.fetch("main_headings", "Unavailable") %></dd>
+      <dt>Matching storefront JSON-LD</dt><dd><%= page["storefront_markup"] ? "Found one matching entity" : "No single matching entity found" %></dd>
+    </dl>
+  <% elsif page %>
+    <p><%= page.fetch("reason") %></p>
+  <% end %>
+<% end %>

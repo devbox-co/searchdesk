@@ -37,6 +37,52 @@ module Tracking
     end
     private_class_method :configured_limit
 
+    def business_profile(place_id:, location_code:)
+      payload = { keyword: "place_id:#{place_id}", location_code: location_code, language_code: "en" }
+      tasks = request(:post, "/v3/business_data/google/my_business_info/live", [payload]).fetch("tasks")
+      task = tasks.sole
+      unless task["status_code"] == 20000 && task.fetch("data").slice("keyword", "location_code", "language_code") == payload.stringify_keys
+        raise Unavailable, "Provider response did not match the requested profile"
+      end
+
+      result = task.fetch("result").sole
+      result.fetch("items").select { |item| item["type"] == "google_business_info" && item["place_id"] == place_id }.sole
+    rescue KeyError, TypeError, NoMethodError, ActiveSupport::EnumerableCoreExt::SoleItemExpectedError
+      raise Unavailable, "Provider did not return a unique matching profile"
+    end
+
+    REVIEWS_PATH = "/v3/business_data/google/reviews"
+
+    def submit_reviews(place_id:, location_code:, depth:, tag:)
+      payload = review_request(place_id, location_code, depth, tag)
+      task = request(:post, "#{REVIEWS_PATH}/task_post", [payload]).fetch("tasks").sole
+      unless task["status_code"] == 20100
+        raise Unavailable, "Provider did not accept the review task"
+      end
+
+      validate_id(task.fetch("id"))
+    rescue KeyError, TypeError, NoMethodError, ScopeError, ActiveSupport::EnumerableCoreExt::SoleItemExpectedError
+      raise Unavailable, "Provider submission could not be confirmed"
+    end
+
+    def poll_reviews(id:, place_id:, location_code:, depth:, tag:)
+      task = request(:get, "#{REVIEWS_PATH}/task_get/#{validate_id(id)}").fetch("tasks").sole
+      raise Unavailable, "Unexpected review task ID" unless task["id"] == id
+      return if [20100, 40601, 40602].include?(task["status_code"])
+
+      payload = review_request(place_id, location_code, depth, tag).except(:priority).stringify_keys
+      result = task.fetch("result").sole if task["status_code"] == 20000
+      unless result && task.fetch("data").slice(*payload.keys) == payload &&
+          result["place_id"] == place_id && result["type"] == "google_reviews" &&
+          result["location_code"] == location_code && result["language_code"] == "en"
+        raise Rejected, "Provider did not return the requested review profile"
+      end
+
+      result
+    rescue KeyError, TypeError, NoMethodError, ScopeError, ActiveSupport::EnumerableCoreExt::SoleItemExpectedError
+      raise Rejected, "Provider returned incomplete review evidence"
+    end
+
     def locations(country)
       raise ScopeError, "Invalid country" unless country.match?(/\A[A-Z]{2}\z/)
       raise Unavailable, "Provider is disabled" unless self.class.enabled?
@@ -49,6 +95,53 @@ module Tracking
         raise ScopeError, "Location catalogue too large" unless rows.is_a?(Array) && rows.size <= 180_000
         rows.filter_map { |item| item.slice("location_code", "country_iso_code", "location_name") if item.is_a?(Hash) }
       end
+    end
+
+    def google_overview(keyword:, location_code:)
+      if URI::DEFAULT_PARSER.unescape(keyword).scrub.match?(PREMIUM_OPERATOR)
+        raise Unavailable, "This search operator is outside the approved Google sample budget"
+      end
+
+      input = { keyword: keyword, location_code: location_code, language_code: "en", device: "desktop", os: "windows",
+        depth: 10, max_crawl_pages: 1, load_async_ai_overview: true }
+      task = request(:post, "#{PREFIX}/live/advanced", [input], read_timeout: 45).fetch("tasks").sole
+      result = task.fetch("result").sole
+      scope = input.slice(:keyword, :location_code, :language_code, :device, :os, :load_async_ai_overview).stringify_keys
+      unless task["status_code"] == 20000 && task.fetch("data").slice(*scope.keys) == scope &&
+          result.slice("keyword", "location_code", "language_code") == scope.slice("keyword", "location_code", "language_code") &&
+          result["items"].is_a?(Array) && result["items"].size.between?(1, 500) && result["items"].all?(Hash)
+        raise Unavailable, "Provider response did not match the requested search"
+      end
+
+      [validate_id(task["id"]), result]
+    rescue KeyError, TypeError, NoMethodError, ScopeError, ActiveSupport::EnumerableCoreExt::SoleItemExpectedError
+      raise Unavailable, "Provider returned incomplete Google search evidence"
+    end
+
+    def llm_response(engine:, model:, country:, prompt:)
+      provider_engine = { "gemini" => "gemini", "perplexity" => "perplexity", "chatgpt" => "chat_gpt" }.fetch(engine)
+      payload = { model_name: model, user_prompt: "Market: #{country}. #{prompt}", max_output_tokens: 200 }
+      payload[:web_search] = true unless engine == "perplexity"
+      payload[:web_search_country_iso_code] = country unless engine == "gemini"
+      payload[:force_web_search] = true if engine == "chatgpt"
+
+      timeout = engine == "chatgpt" ? 125 : 20
+      task = request(:post, "/v3/ai_optimization/#{provider_engine}/llm_responses/live", [payload], read_timeout: timeout)
+        .fetch("tasks").sole
+      result = task.fetch("result").sole
+      returned_model = result["model_name"]
+      same_model = returned_model == model || (engine == "chatgpt" &&
+        returned_model.to_s.match?(/\A#{Regexp.escape(model)}-\d{4}-\d{2}-\d{2}\z/))
+      unless task["status_code"] == 20000 && task.dig("data", "se") == provider_engine &&
+          task.dig("data", "user_prompt") == payload[:user_prompt] &&
+          (engine == "gemini" || task.dig("data", "web_search_country_iso_code") == country) &&
+          same_model && result["web_search"] == true && result["items"].is_a?(Array)
+        raise Unavailable, "Provider response did not match the requested sample"
+      end
+
+      [validate_id(task["id"]), result]
+    rescue KeyError, TypeError, NoMethodError, ScopeError, ActiveSupport::EnumerableCoreExt::SoleItemExpectedError
+      raise Unavailable, "Provider returned incomplete sample data"
     end
 
     def submit(slot)
@@ -100,6 +193,11 @@ module Tracking
 
     private
 
+    def review_request(place_id, location_code, depth, tag)
+      { keyword: "place_id:#{place_id}", location_code: location_code, language_code: "en",
+        depth: depth, sort_by: "newest", priority: 1, tag: tag }
+    end
+
     def validate_id(value)
       raise ScopeError, "Invalid provider task ID" unless value.is_a?(String) && value.match?(/\A[\da-f-]{36}\z/i)
       value
@@ -109,12 +207,12 @@ module Tracking
       slot.attempt_key || raise(ScopeError, "Missing correlation key")
     end
 
-    def request(verb, path, body = nil, max_bytes: MAX_BYTES)
+    def request(verb, path, body = nil, max_bytes: MAX_BYTES, read_timeout: 20)
       raise Unavailable, "Provider is disabled" unless self.class.enabled?
       http = Net::HTTP.new(HOST, 443)
       http.use_ssl = true
       http.open_timeout = 5
-      http.read_timeout = 20
+      http.read_timeout = read_timeout
       http.write_timeout = 10
       http.max_retries = 0
       req = verb == :post ? Net::HTTP::Post.new(path) : Net::HTTP::Get.new(path)

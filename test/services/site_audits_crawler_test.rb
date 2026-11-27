@@ -37,6 +37,22 @@ class SiteAuditsCrawlerTest < ActiveSupport::TestCase
     assert_equal ["/offsite"], report["issues"].find { |i| i["code"] == "redirect_unfollowed" }["paths"]
   end
 
+  test "content evidence stores bounded facts about static markup and main text" do
+    report = crawl("/robots.txt" => response(status: 404),
+      "/" => response(body: '<main><p>Two words</p><p>Plus these</p><nav>Menu text</nav><p hidden>Hidden</p></main><a href="/next">Next</a>'),
+      "/next" => response(body: '<script type="application/ld+json">{"@graph":[{"@type":"Restaurant","url":"https://example.test/next","name":"Unstored value","telephone":"+441632960000"}]}</script><h1>Heading</h1>'))
+
+    home, existing = report.fetch("pages")
+    assert_equal [4, false], home.values_at("main_word_count", "structured_markup_present")
+    assert_equal true, existing["structured_markup_present"]
+    assert_nil existing["main_word_count"]
+    fingerprints = existing.fetch("local_business_fingerprint")
+    assert_equal %w[businessType name telephone], fingerprints.keys.sort
+    assert_equal 2, existing.fetch("local_business_evidence_version")
+    assert_match(/\A[0-9a-f]{64}\z/, fingerprints.fetch("name"))
+    refute_includes report.to_json, "Unstored value"
+  end
+
   test "checked page count is bounded even when the homepage links to hundreds of URLs" do
     references = (1..500).map { |i| %(<a href="/p#{i}">page</a>) }.join
     routes = { "/robots.txt" => response(status: 404), "/" => response(body: references) }

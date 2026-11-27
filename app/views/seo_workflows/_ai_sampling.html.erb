@@ -1,0 +1,24 @@
+<% if settings %>
+  <h3>Collect a live citation sample</h3>
+  <p><strong>Public prompt</strong> <%= settings.fetch(:prompt) %></p>
+  <p>Country <%= settings.fetch(:country) %>. Each button queues one billable DataForSEO request.</p>
+  <% if settings.fetch(:engines).include?(SeoWorkflows::AiVisibilitySample::GOOGLE) %>
+    <p>The Google sample searches the site's verified market on desktop. Loading an asynchronous AI Overview can add a provider charge.</p>
+  <% end %>
+  <div class="schedule-actions">
+    <% settings.fetch(:engines).each do |engine| %>
+      <%= button_to "Sample #{SeoWorkflows::AiVisibilitySample::LABELS.fetch(engine)}", sample_ai_visibility_seo_workflows_path,
+        params: { engine: engine, revision: settings.fetch(:revision) }, class: "button" %>
+    <% end %>
+  </div>
+<% elsif workspace_owner? %>
+  <p>Ask your operator to approve a public prompt, country and engines to enable live sampling.</p>
+<% end %>
+<% if samples.any? %>
+  <h3>Recent AI samples</h3>
+  <ul>
+    <% samples.each do |sample| %>
+      <li><%= link_to sample.title, source_snapshot_path(sample) %> · <%= sample.observed_on %> · <%= SeoWorkflows::AiVisibilitySample.status_text(sample) %></li>
+    <% end %>
+  </ul>
+<% end %>

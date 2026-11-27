@@ -2,7 +2,7 @@ module AiAssistant
   # Local-only provenance. The provider receives the selected facts, never these
   # identifiers. Display and dispatch run the same check against current records.
   class EvidenceAccess
-    RECORD_TYPES = %w[keywords observations actions tasks snapshots search_reports].freeze
+    RECORD_TYPES = %w[keywords observations actions tasks snapshots search_reports findings].freeze
     FLAGS = {"google" => :share_google, "maps" => :share_maps, "semrush" => :share_semrush}.freeze
     attr_reader :metadata
 
@@ -84,6 +84,7 @@ module AiAssistant
       when "tasks" then @site.project_tasks
       when "snapshots" then SourceSnapshot.visible_for(@site)
       when "search_reports" then SearchConsoleReport.joins(:search_console_connection).where(search_console_connections: {site_id: @site.id})
+      when "findings" then SiteFinding.competing_pages.current.where(site_id: @site.id)
       end
     end
   end

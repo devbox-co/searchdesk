@@ -1,0 +1,27 @@
+<% content_for :title, "New prospect audit" %>
+<div class="form-page">
+  <%= link_to "Live prospect audits", prospect_audits_path, class: "back" %>
+  <h1>New prospect audit</h1>
+  <p>Searchdesk will read up to five public pages and save an internal report. Use public business details.</p>
+  <% if @audit.errors.any? %>
+    <ul role="alert"><% @audit.errors.full_messages.each do |error| %><li><%= error %></li><% end %></ul>
+  <% end %>
+  <%= form_with model: @audit, class: "stack" do |form| %>
+    <%= form.label :business_name %>
+    <%= form.text_field :business_name, required: true, maxlength: 120 %>
+    <%= form.label :target_host, "Public website hostname" %>
+    <%= form.text_field :target_host, required: true, maxlength: 253, placeholder: "example.com" %>
+    <%= form.label :market, "Location or market" %>
+    <%= form.text_field :market, required: true, maxlength: 120 %>
+    <%= form.label :keyword, "Target search term" %>
+    <%= form.text_field :keyword, required: true, maxlength: 120 %>
+    <% if ProspectAudit.provider_enabled?(current_site) %>
+      <div>
+        <%= check_box_tag "prospect_audit[provider]", "1", @audit.provider_status == "queued" && @audit.errors.any?,
+          id: "prospect_audit_provider" %>
+        <%= label_tag "prospect_audit_provider", "Use 50 Local SEO Data credits for a business name and market lookup" %>
+      </div>
+    <% end %>
+    <%= form.submit "Start prospect audit", class: "button solid" %>
+  <% end %>
+</div>

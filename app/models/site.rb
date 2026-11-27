@@ -1,12 +1,18 @@
 require "uri"
 
 class Site < ApplicationRecord
+  encrypts :seo_slack_webhook
+  self.filter_attributes += [:seo_slack_webhook]
+  has_one :business_profile_connection, dependent: :destroy
   belongs_to :workspace
   has_many :site_audits, dependent: :delete_all
+  has_many :prospect_audits, dependent: :delete_all
   has_one :ai_setting, dependent: :destroy
   has_many :ai_runs, dependent: :delete_all
   has_many :source_snapshots, dependent: :delete_all
   has_many :project_tasks, dependent: :delete_all
+  has_many :seo_workflow_schedules, dependent: :delete_all
+  has_many :seo_workflow_runs, dependent: :delete_all
   has_many :keywords, dependent: :destroy
   has_one :search_console_connection, dependent: :destroy
   has_one :local_falcon_connection, dependent: :destroy

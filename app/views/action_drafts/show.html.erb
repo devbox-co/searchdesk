@@ -1,20 +1,141 @@
-<% content_for :title, "Action preview" %>
-<div class="form-page">
-  <%= link_to "← Actions", actions_path, class: "back" %>
-  <p class="eyebrow">Action preview</p>
-  <h1><%= @action.title %></h1>
-  <p><%= @action.keyword.phrase %> · <%= @action.tracking_series.device.capitalize %> · <%= compact_date(@action.observed_on) %></p>
-  <% if @historical %><p class="notice">This evidence is more than a day old. Check a fresh observation for this keyword and device before making changes.</p><% end %>
-  <p><%= @action.description %></p>
+<% content_for :title, "Keyword action" %>
+<% device = @action.tracking_series.device %>
+<% keyword = @action.keyword %>
+<% open_action = @action.status == "open" %>
+<% snapshot = @draft&.input_snapshot.presence || {} %>
+<% evidence = snapshot["evidence"] || @action.evidence || {} %>
+<% handoff = @guide.handoff %>
+<article class="action-guide" aria-labelledby="action-title">
+  <%= link_to actions_path(keyword_id: keyword.id, state: @action.status, anchor: dom_id(@action)), class: "back" do %>
+    <%= ui_icon(:arrow_left, size: 16) %> Back to keyword actions
+  <% end %>
+
+  <header class="action-guide-intro">
+    <p class="action-guide-context"><%= ui_icon(:search, size: 16) %> <strong><%= snapshot["phrase"].presence || keyword.phrase %></strong>
+      <span>·</span> <%= device.capitalize %> <span>·</span> <%= time_tag @action.observed_on, compact_date(@action.observed_on) %>
+      <% unless open_action %><span class="badge">Reviewed</span><% end %>
+    </p>
+    <h1 id="action-title"><%= @guide.supported? ? @guide.headline : @action.title %></h1>
+    <p class="action-guide-meaning"><%= @guide.supported? ? @guide.meaning : @action.description %></p>
+    <% if handoff.present? %>
+      <%= link_to "Jump to developer or AI instructions", "#handoff-heading", class: "action-guide-jump", data: {turbo: false} %>
+    <% end %>
+  </header>
+
+  <% if @historical %><p class="notice">This evidence is more than a day old. <%= link_to "Check the latest keyword history", keyword_path(keyword, device: device) %> before acting on it.</p><% end %>
+
+  <% if @guide.supported? %>
+    <% check_available = @guide.link_check_available? %>
+    <% finding = @guide.saved_link_finding if check_available %>
+    <%= tag.section(class: "action-guide-panel", aria: {labelledby: "next-steps-heading"},
+      id: ("link-check" if check_available), tabindex: (-1 if check_available)) do %>
+      <h2 id="next-steps-heading"><%= ui_icon(check_available ? :audit : :tasks) %> <%= check_available ? "Website link check" : "Your next steps" %></h2>
+      <% if finding %>
+        <div class="action-link-result <%= 'is-verified' if finding.outcome == 'contextual' %>">
+          <h3><%= ui_icon(finding.outcome == "contextual" ? :check : :info) %> <%= finding.heading %></h3>
+          <p><%= finding.evidence %></p>
+          <% if @guide.saved_choice_label %><p><%= finding.next_step %></p><% end %>
+          <p class="action-link-checked">Checked <%= time_tag finding.checked_at, finding.checked_label %></p>
+        </div>
+      <% elsif check_available %>
+        <p>See whether the page Google showed already links to the page you chose and where readers will find the link.</p>
+      <% end %>
+      <% pages = [["Page Google showed", @guide.winning_url]] %>
+      <% pages << ["Page you chose", @guide.preferred_url] if @action.kind == "page_match" %>
+      <% if pages.any? { |_label, url| url.present? } %>
+        <div class="action-guide-pages">
+          <% pages.each do |label, url| %>
+            <% if url.present? %>
+              <%= link_to url, target: "_blank", rel: "noopener noreferrer", class: "action-guide-page" do %>
+                <span class="action-guide-page-label"><%= label %> <%= ui_icon(:external_link, size: 14) %><span class="sr-only"> (opens in a new tab)</span></span>
+                <span class="action-guide-path"><%= ranking_page_label(url) %></span>
+              <% end %>
+            <% else %>
+              <p class="action-guide-page is-missing"><strong><%= label %></strong><span>Page address unavailable</span></p>
+            <% end %>
+          <% end %>
+        </div>
+      <% end %>
+      <% if (final_url = @guide.redirected_destination) %>
+        <p>The chosen address redirects to <%= link_to ranking_page_label(final_url), final_url, target: "_blank", rel: "noopener noreferrer" %>.</p>
+      <% end %>
+      <% if check_available && can_manage_site? %>
+        <%= button_to finding ? "Check again" : "Check for an existing link", action_draft_link_check_path(@action),
+          params: {draft_id: @draft.id, recheck: (1 if finding)}.compact, class: "button", form_class: "action-link-check-form",
+          form: {data: {turbo: false}} %>
+        <span class="action-link-checked" data-review-progress role="status" hidden>Checking both pages…</span>
+      <% end %>
+      <% if @guide.choice_available? && @guide.saved_choice_label %>
+        <p class="action-guide-decision"><strong>Saved decision</strong> <%= @guide.saved_choice_label %></p>
+      <% end %>
+      <% if can_manage_site? && @guide.choice_available? && !@guide.saved_choice_label %>
+        <%= render "choice_form" %>
+      <% else %>
+        <% if @guide.steps.any? %>
+          <ol class="action-guide-steps">
+            <% @guide.steps.each do |heading, instruction| %>
+              <li><h3><%= heading %></h3><p><%= instruction %></p></li>
+            <% end %>
+          </ol>
+        <% end %>
+        <% if can_manage_site? && @guide.choice_available? %>
+          <details class="action-guide-change"><summary>Change decision or note</summary><%= render "choice_form" %></details>
+        <% end %>
+      <% end %>
+      <div class="action-guide-links">
+        <%= link_to rank_icon_text(:rankings, "View keyword history"), keyword_path(keyword, device: device) %>
+        <% if @action.kind == "page_match" && can_manage_site? && open_action %>
+          <%= link_to rank_icon_text(:flag, "Review preferred page setting"), keyword_path(keyword, device: device, anchor: "preferred-page") %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% if handoff.present? %>
+      <section class="action-guide-panel action-guide-handoff" aria-labelledby="handoff-heading">
+        <h2 id="handoff-heading" tabindex="-1"><%= ui_icon(:file_text) %> Give this to your developer or AI agent</h2>
+        <label for="action-handoff">Copy this request into a message or your AI chat.</label>
+        <textarea readonly id="action-handoff" data-action-handoff rows="8" spellcheck="false"><%= handoff %></textarea>
+        <div class="action-guide-copy">
+          <button class="button solid" type="button" data-copy-handoff hidden aria-controls="action-handoff">
+            <%= ui_icon(:layers, size: 16) %> Copy instructions
+          </button>
+          <span role="status" data-copy-status></span>
+        </div>
+      </section>
+    <% end %>
+  <% end %>
+
   <% if @draft %>
-    <h2>Review steps</h2>
-    <ol><% @draft.instructions.each do |step| %><li><%= step %></li><% end %></ol>
-    <details class="guide"><summary>Review receipt</summary>
+    <details class="guide action-guide-receipt"><summary>Review receipt</summary>
       <p>Prepared <%= compact_date(@draft.created_at) %> using <%= @draft.skill_version %>.</p>
-      <p>Evidence captured for <%= @draft.input_snapshot["location"] %> on <%= @draft.input_snapshot["observed_on"] %>.</p>
-      <small>Reference <%= @draft.input_digest.first(12) %></small>
+      <dl class="facts">
+        <dt>Search location</dt><dd><%= snapshot["location"].presence || "Unavailable" %></dd>
+        <dt>Source</dt><dd><%= {"demo" => "Simulated demonstration", "dataforseo" => "DataForSEO", "manual" => "Manual import"}.fetch(evidence["source"], "Unrecorded") %></dd>
+        <% if evidence["position"].present? %><dt>Position</dt><dd><%= evidence["position"] %></dd><% end %>
+        <dt>Reference</dt><dd><%= @draft.input_digest.first(12) %></dd>
+        <% if !@guide.link_check_available? && (past_check = @guide.saved_link_finding) %>
+          <dt>Earlier link check</dt><dd><%= time_tag past_check.checked_at, past_check.checked_label %>. <%= past_check.evidence %></dd>
+        <% end %>
+        <% if @guide.saved_choice_label %>
+          <dt>Decision for this review</dt><dd><%= @guide.saved_choice_label %></dd>
+          <% if @draft.owner_choice_note.present? %><dt>Note on this decision</dt><dd><%= @draft.owner_choice_note %></dd><% end %>
+        <% end %>
+      </dl>
+      <% if @draft.instructions.present? %><ul><% @draft.instructions.each do |step| %><li><%= step %></li><% end %></ul><% end %>
+      <%= link_to "View ranking evidence", rankings_path(source: "local", day: @action.observed_on, device: device, anchor: dom_id(@action.tracking_series)) %>
     </details>
-  <% else %><p class="notice">A review for this evidence has not been prepared.</p><% end %>
-  <% if @wording.present? %><section><h2>Approved business wording</h2><p><%= @wording %></p></section><% end %>
-  <%= link_to "View ranking evidence", keyword_path(@action.keyword, device: @action.tracking_series.device), class: "button" %>
-</div>
+  <% elsif @guide.supported? %>
+    <p class="notice">These steps use the saved action. A dated review receipt is available once a manager prepares it.</p>
+    <% if can_manage_site? && open_action %><%= button_to "Prepare review", action_draft_path(@action), method: :post, class: "button" %><% end %>
+  <% else %>
+    <%= link_to "View ranking evidence", keyword_path(keyword, device: device) %>
+  <% end %>
+  <% if @wording.present? %><section class="action-guide-panel"><h2>Approved business wording</h2><p><%= @wording %></p></section><% end %>
+  <% if can_manage_site? %>
+    <div class="action-guide-finish">
+      <p><%= open_action ? "Mark reviewed when you’ve decided what to do." : "Reopen this action if it needs another review." %></p>
+      <%= button_to open_action ? "Mark reviewed" : "Reopen action", action_path(@action), method: :patch,
+        params: {status: open_action ? "resolved" : "open"}, class: "button" %>
+    </div>
+  <% end %>
+</article>

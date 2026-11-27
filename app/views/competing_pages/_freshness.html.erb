@@ -1,0 +1,4 @@
+<p class="cp-note">Weeks through <%= compact_date(Date.iso8601(@through)) %><% if @connection.page_week_synced_at %> · Last checked <%= compact_date(@connection.page_week_synced_at.in_time_zone(current_site.time_zone)) %><% end %></p>
+<% if @connection.status != "connected" || @connection.page_week_error.present? %>
+  <p class="cp-stale"><%= ui_icon(:info, size: 16) %> Updates are paused. These are the last saved results. <%= link_to "Check Search Console", search_console_path %></p>
+<% end %>

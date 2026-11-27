@@ -1,0 +1,43 @@
+<% content_for :title, "#{@template.key} current-period preview" %>
+<div class="schedule-view">
+  <header class="rank-heading schedule-page-heading">
+    <div>
+      <h1><%= @template.key %> <%= @template.name %></h1>
+      <p class="rank-intro">Current-period preview · <%= current_site.name %> · <%= @start %> to <%= @day %></p>
+    </div>
+    <%= link_to "Workflow setup", setup_seo_workflows_path(anchor: @template.key), class: "button" %>
+  </header>
+  <% evidence_rows = @rows %>
+  <% if (entry = evidence_rows.find { |row| row["weekly_performance"] }) %>
+    <%= render "seo_workflows/weekly_performance", weekly: entry.fetch("weekly_performance") %>
+    <% evidence_rows = evidence_rows - [entry] %>
+  <% end %>
+  <% if (entry = evidence_rows.find { |row| row["quarterly_review"] }) %>
+    <% review = entry.fetch("quarterly_review") %>
+    <%= render "seo_workflows/quarterly_review", review: review %>
+    <% evidence_rows = evidence_rows - [entry] - review.fetch("competitors") - review.fetch("ai_evidence") %>
+  <% end %>
+  <section class="schedule-section">
+    <h2>Saved evidence</h2>
+    <p>This preview uses evidence available so far. The regular report covers the closed period.</p>
+    <% if evidence_rows.empty? %>
+      <p>No eligible evidence has been saved for the current period.</p>
+    <% else %>
+      <ul>
+        <% evidence_rows.each do |row| %>
+          <li>
+            <strong><%= row.fetch("source") %></strong> · <%= row.fetch("text") %>
+            <%= link_to "View source", row.fetch("path"), class: "schedule-source-link" %>
+            <% if row["baseline_path"] %>
+              <%= link_to "View comparison sample", row.fetch("baseline_path"), class: "schedule-source-link" %>
+            <% end %>
+            <% if row["brief_id"] %>
+              <%= link_to "View landing page brief", source_snapshot_path(row.fetch("brief_id")) %>
+              <% if row["draft"] %><pre class="schedule-draft"><%= row.fetch("draft") %></pre><% end %>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+  </section>
+</div>

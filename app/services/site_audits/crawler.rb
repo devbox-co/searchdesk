@@ -2,13 +2,13 @@ require "nokogiri"
 
 module SiteAudits
   class Crawler
+    include CrawlRequests
+
     PAGE_LIMIT = 20
     REQUEST_LIMIT = 28
     TIME_LIMIT = 120
     DISCOVERY_LIMIT = 400
-    MIN_DELAY = 0.5
     HTML = %w[text/html application/xhtml+xml].freeze
-    REDIRECTS = [301, 302, 303, 307, 308].freeze
     CHECKS = {
       "missing_title" => ["Missing page title", "Add a descriptive title that identifies the page's purpose."],
       "duplicate_title" => ["Repeated page title", "Check these pages together and give distinct pages distinct titles."],
@@ -22,23 +22,21 @@ module SiteAudits
       "fetch_error" => ["Page could not be read", "Check availability, TLS and response size before rerunning the crawl."],
       "redirect_unfollowed" => ["Redirect outside crawl scope", "Review the redirect destination and confirm it is intentional."]
     }.freeze
-    class Stop < StandardError; end
 
-    def initialize(host:, fetcher: Fetcher.new, sleeper: ->(duration) { sleep(duration) })
+    def initialize(host:, page_limit: PAGE_LIMIT, fetcher: Fetcher.new, sleeper: ->(duration) { sleep(duration) })
       @start = URI("https://#{host}/")
+      @page_limit = page_limit.clamp(1, PAGE_LIMIT)
       @scope = PublicUrl.new(host)
       @fetcher, @sleeper = fetcher, sleeper
       @frontier = [@start]
       @discovered = Set[@start.to_s]
       @visited, @blocked = Set.new, Set.new
-      @policies, @outgoing, @pages = {}, {}, []
-      @requests = 0
-      @delay = MIN_DELAY
+      @outgoing, @pages = {}, []
     end
 
     def call
-      @deadline = clock + TIME_LIMIT
-      while @frontier.any? && @pages.size < PAGE_LIMIT
+      start_requests(request_limit: REQUEST_LIMIT, time_limit: TIME_LIMIT)
+      while @frontier.any? && @pages.size < @page_limit
         uri = @frontier.shift
         next unless @visited.add?(uri.to_s)
         if policy_for(uri).allowed?(uri.path)
@@ -47,57 +45,12 @@ module SiteAudits
           @blocked << uri.to_s
         end
       end
-      complete_report(@frontier.any? ? "Completed the #{PAGE_LIMIT}-URL sample." : nil, completed: true)
+      complete_report(@frontier.any? ? "Completed the #{@page_limit}-URL sample." : nil, completed: true)
     rescue Stop => error
       complete_report(error.message)
     end
 
     private
-
-    def clock
-      Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    end
-
-    def fetch(uri, robots: false)
-      raise Stop, "Reached the request limit for this crawl." if @requests >= REQUEST_LIMIT
-      # Leave enough time for the complete bounded network request.
-      raise Stop, "Reached the time limit for this crawl." if clock + @delay + 12 > @deadline
-      @sleeper.call(@delay) unless @requests.zero?
-      @requests += 1
-      @fetcher.get(uri, robots: robots)
-    end
-
-    def policy_for(uri)
-      origin = "#{uri.scheme}://#{uri.host}"
-      @policies[origin] ||= begin
-        target = @scope.resolve("/robots.txt", base: origin, robots: true)
-        visited = Set.new
-        raise Stop, "The site address is outside the public crawl scope." unless target
-        rules = loop do
-          raise Stop, "Could not confirm robots.txt after redirects." unless visited.size < 6 && visited.add?(target.to_s)
-          response = fetch(target, robots: true)
-          case response.status
-          when 200..299
-            raise Stop, "Could not read robots.txt because the server returned HTML." if response.body.lstrip.start_with?("<")
-            break Robots.new(response.body)
-          when 404, 410
-            break Robots.new("")
-          when *REDIRECTS
-            target = @scope.resolve(response.location, base: target, robots: true)
-            raise Stop, "The robots.txt redirect left this site's crawl scope." unless target
-          else
-            raise Stop, "The server returned HTTP #{response.status} for robots.txt. The crawl stopped."
-          end
-        end
-        raise Stop, "The site's requested crawl delay exceeds the audit time budget." if rules.delay > 10
-        @delay = [@delay, rules.delay].max
-        rules
-      end
-    rescue Robots::Unreadable
-      raise Stop, "The robots.txt rules exceed the supported audit limits."
-    rescue Fetcher::Error => error
-      raise Stop, "Could not confirm robots.txt. #{error.message}"
-    end
 
     def inspect_page(uri)
       row = { "url" => uri.to_s, "path" => uri.path, "status" => nil, "issues" => [] }
@@ -136,6 +89,21 @@ module SiteAudits
       row["html"] = true
       row["title"] = document.at_css("head title")&.text.to_s.squish.first(220)
       row["h1_count"] = document.css("h1").count { |h| h.text.present? }
+      row["structured_markup_present"] = document.css("script[type], [itemscope], [typeof]").any? do |element|
+        element.name != "script" || element["type"].to_s.strip.casecmp?("application/ld+json")
+      end
+      if row["structured_markup_present"]
+        fingerprint = LocalBusinessMarkup.extract(document, uri.to_s, @start.host)
+        if fingerprint
+          row["local_business_fingerprint"] = fingerprint
+          row["local_business_evidence_version"] = LocalBusinessMarkup::EVIDENCE_VERSION
+        end
+      end
+      if (main = document.at_css("main, [role=main]"))
+        main = main.dup
+        main.css("script, style, template, nav, [hidden], [aria-hidden=true]").remove
+        row["main_word_count"] = main.xpath(".//text()").sum { |node| node.text.scan(/[[:alnum:]]+(?:[’'-][[:alnum:]]+)*/).size }
+      end
       metas = document.css("head meta[name]").group_by { |tag| tag["name"].to_s.downcase }
       row["issues"] << "missing_title" if row["title"].blank?
       row["issues"] << "missing_description" unless metas.fetch("description", []).any? { |tag| tag["content"].present? }
@@ -203,7 +171,7 @@ module SiteAudits
         "pages_checked" => @pages.size, "html_pages" => html_pages, "redirects" => @pages.count { |p| REDIRECTS.include?(p["status"]) },
         "http_errors" => errors.size, "fetch_errors" => fetch_errors, "robots_blocked" => @blocked.size,
         "issues" => @pages.sum { |p| p["issues"].size }, "pages_with_issues" => @pages.count { |p| p["issues"].any? },
-        "discovered_urls" => @discovered.size, "request_count" => @requests, "page_limit" => PAGE_LIMIT
+        "discovered_urls" => @discovered.size, "request_count" => @requests, "page_limit" => @page_limit
       }, "issues" => issues, "pages" => @pages }
     end
   end

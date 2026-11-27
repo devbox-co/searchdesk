@@ -1,0 +1,73 @@
+<% content_for :title, "Prospect audit · #{@audit.business_name}" %>
+<div class="schedule-view">
+  <header class="rank-heading schedule-page-heading">
+    <div>
+      <%= link_to "Live prospect audits", prospect_audits_path, class: "back" %>
+      <h1><%= @audit.business_name %></h1>
+      <p class="rank-intro"><%= @audit.target_host %> · <%= @audit.market %> · <%= @audit.requested_on %></p>
+      <p>Target search term · <%= @audit.keyword %></p>
+    </div>
+    <% if %w[queued running].include?(@audit.website_status) || %w[queued submitting pending].include?(@audit.provider_status) %>
+      <%= link_to "Check progress", prospect_audit_path(@audit), class: "button", data: { turbo: false } %>
+    <% end %>
+  </header>
+
+  <section class="schedule-section">
+    <h2>Public website audit</h2>
+    <p><%= @audit.website_status.humanize %></p>
+    <% if (counts = @audit.website_report["counts"]) %>
+      <p>URLs checked: <%= counts.fetch("pages_checked") %> · HTML pages: <%= counts.fetch("html_pages") %> · Robots exclusions: <%= counts.fetch("robots_blocked") %></p>
+    <% end %>
+    <% if @audit.website_report["coverage_note"].present? %>
+      <p><%= @audit.website_report["coverage_note"] %></p>
+    <% end %>
+    <% findings = Array(@audit.website_report["findings"]) %>
+    <% if findings.any? %>
+      <h3>Findings and next checks</h3>
+      <ol>
+        <% findings.each do |finding| %>
+          <% label, advice = SiteAudits::Crawler::CHECKS.fetch(finding.fetch("code")) %>
+          <li><strong><%= label %></strong> · <%= finding.fetch("paths").join(", ") %><br><%= advice %></li>
+        <% end %>
+      </ol>
+    <% elsif @audit.website_status == "complete" %>
+      <p>The sampled pages produced no findings from these checks.</p>
+    <% elsif @audit.website_status == "failed" && counts.nil? %>
+      <p>The website check ended before Searchdesk could save observations.</p>
+    <% end %>
+  </section>
+
+  <% unless @audit.provider_status == "off" %>
+    <section class="schedule-section">
+      <h2>Local SEO Data lookup</h2>
+      <p><%= @audit.provider_status.humanize %></p>
+      <% if @audit.provider_status == "complete" %>
+        <p>The provider matches by business name and market. Confirm the Business Profile identity before using these readings.</p>
+        <% evidence = @audit.provider_report %>
+        <dl class="facts">
+          <% { "local_pack_position" => "Local pack position", "rating" => "Displayed rating", "reviews_count" => "Review count",
+               "profile_completeness" => "Profile completeness (%)", "review_velocity" => "Estimated reviews per month" }.each do |key, label| %>
+            <dt><%= label %></dt><dd><%= evidence.fetch(key, "Not reported") %></dd>
+          <% end %>
+        </dl>
+        <% if Array(evidence["organic_positions"]).any? %>
+          <h3>Search terms checked by the provider</h3>
+          <ul><% evidence["organic_positions"].each do |item| %><li><%= item.fetch("keyword") %> · Position <%= item.fetch("rank") %></li><% end %></ul>
+        <% end %>
+        <% if Array(evidence["competitors"]).any? %>
+          <h3>Sampled competitors</h3>
+          <ul><% evidence["competitors"].each do |item| %>
+            <li>
+              <%= item.fetch("name") %>
+              <% if item["rank"] %> · Position <%= item["rank"] %><% end %>
+              <% if item["reviews_count"] %> · <%= item["reviews_count"] %> reviews<% end %>
+              <% if item["rating"] %> · <%= item["rating"] %> out of 5<% end %>
+            </li>
+          <% end %></ul>
+        <% end %>
+      <% elsif @audit.provider_status == "unconfirmed" %>
+        <p>Searchdesk could not confirm the provider result. The submission remains reserved.</p>
+      <% end %>
+    </section>
+  <% end %>
+</div>

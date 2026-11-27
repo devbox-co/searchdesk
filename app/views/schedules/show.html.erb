@@ -6,7 +6,10 @@
       <h1>Schedules</h1>
       <p class="rank-intro">Recurring work for <%= current_site.name %>. Times are shown in <strong><%= current_site.time_zone %></strong>.</p>
     </div>
-    <%= link_to rank_icon_text(:calendar, "Refresh status"), schedules_path, class: "button", aria: {label: "Refresh schedule status"} %>
+    <div class="schedule-actions">
+      <%= link_to "SEO tasks", seo_workflows_path, class: "button solid" %>
+      <%= link_to rank_icon_text(:calendar, "Refresh status"), schedules_path, class: "button", aria: {label: "Refresh schedule status"} %>
+    </div>
   </header>
 
   <% health = @worker_health[:status] %>

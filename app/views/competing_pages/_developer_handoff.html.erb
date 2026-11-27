@@ -1,0 +1,7 @@
+<details class="cp-listing-handoff">
+  <summary>Instructions for your developer or AI agent</summary>
+  <label for="<%= field_id %>">Developer instructions</label>
+  <textarea id="<%= field_id %>" readonly data-action-handoff rows="7" spellcheck="false"><%= instructions %></textarea>
+</details>
+<button class="button" type="button" data-copy-handoff hidden aria-controls="<%= field_id %>"><%= rank_icon_text(:layers, button_label) %></button>
+<span role="status" data-copy-status></span>

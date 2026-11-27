@@ -39,7 +39,7 @@
     <% end %>
     <% if @history.any? %>
       <section class="panel ai-card">
-        <h2><%= ui_icon(:file_text) %> Your recent questions</h2>
+        <h2><%= ui_icon(:file_text) %> Your questions and recommendations</h2>
         <ul class="ai-history">
           <% @history.each do |run| %><li>
             <%= link_to ai_run_title(run), assistant_run_path(run) %>

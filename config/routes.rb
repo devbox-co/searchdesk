@@ -27,12 +27,50 @@ Rails.application.routes.draw do
     patch :schedule
   end
   get "maps/:id/street.png", to: "street_maps#show", as: :street_map, constraints: { id: /\d+/ }, format: false
-  resources :source_snapshots, only: %i[index show]
+  resources :source_snapshots, only: %i[index show] do
+    get :geogrid, on: :member
+  end
+  resources :prospect_audits, only: %i[index new create show]
   resources :project_tasks, only: %i[index show update]
+  resources :seo_workflows, only: [:index, :show] do
+    get "competitor_capture/:capture_id", action: :competitor_capture, on: :collection, as: :competitor_capture
+    get :setup, on: :collection
+    get :evidence_preview, on: :collection
+    post :recover_competitor_evidence, on: :collection
+    post :recover_local_services_evidence, on: :collection
+    get "local_services_capture/:capture_id", action: :local_services_capture, on: :collection, as: :local_services_capture
+    post :sample_ai_visibility, on: :collection
+    post :compare_landing_pages, on: :collection
+    post :request_maps_scan, on: :collection
+    post :import_maps_grid, on: :collection
+    post :run, on: :collection
+    post :schedule, on: :collection
+    post :import_evidence, on: :collection
+    get :export_evidence, on: :collection
+    get :download_brain_vault, on: :collection
+    patch :notifications, on: :collection
+    patch :slack, on: :collection
+    patch :rollup, on: :collection
+    post :open_rollup_location, on: :collection
+    patch :review, on: :member
+    patch :refresh_draft, on: :member
+    post :publish, on: :member
+    patch :record_delivery, on: :member
+    post :preview_delivery, on: :member
+    patch :confirm_delivery, on: :member
+    delete :cancel_delivery, on: :member
+  end
   resources :project_imports, only: %i[new create]
+  resources :competing_pages, only: %i[index show update] do
+    post :recommendation, on: :member
+    post :listing_check, on: :member
+    post :article_check, on: :member
+  end
   resources :actions, only: %i[index update], controller: "keyword_actions"
   post "actions/:id/draft", to: "action_drafts#create", as: :action_draft
   get "actions/:id/draft", to: "action_drafts#show"
+  patch "actions/:id/draft/choice", to: "action_drafts#update_choice", as: :action_draft_choice
+  post "actions/:id/draft/link-check", to: "action_drafts#check_link", as: :action_draft_link_check
   resource :wording_setting, only: %i[show update]
   get "assistant", to: "assistants#show", as: :assistant
   post "assistant/questions", to: "assistants#ask", as: :assistant_questions
@@ -56,6 +94,11 @@ Rails.application.routes.draw do
     post :authorize
     get :callback
     post :sync
+  end
+  resource :business_profile, only: %i[show update destroy], controller: "business_profile" do
+    post :authorize
+    get :callback
+    post :inspect_live
   end
   resource :analytics, only: %i[show update destroy], controller: "analytics" do
     post :authorize

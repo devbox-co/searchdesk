@@ -19,8 +19,9 @@ module SiteAudits
       false
     end
 
-    def initialize(host)
+    def initialize(host, https_only: false)
       @host = host.to_s.downcase
+      @https_only = https_only
     end
 
     def resolve(reference, base:, robots: false)
@@ -28,6 +29,7 @@ module SiteAudits
       return if raw.blank? || raw.start_with?("#") || raw.bytesize > 2048 || raw.match?(/[\\\x00-\x1f]/)
       uri = URI.join(base.to_s, raw)
       return unless uri.is_a?(URI::HTTP) && uri.port == uri.default_port && !uri.userinfo && !uri.query
+      return if @https_only && uri.scheme != "https"
       return unless Site::HOST_FORMAT.match?(uri.host.to_s.downcase) && Tracking::ResultUrl.host_matches?(@host, uri.host)
       uri.host = uri.host.downcase
       uri.fragment = nil

@@ -1,0 +1,4 @@
+<%= button_to label, article_check_competing_page_path(@finding, keyword_id: @keyword&.id),
+  params: {version: @finding.updated_at.iso8601(6), capture_key: @article_candidate.fetch("capture_key")},
+  class: "button", form_class: "cp-listing-form", form: {data: {turbo: false}} %>
+<span class="cp-note" role="status" data-review-progress hidden>Reading the ranking page and checking its homepage link…</span>

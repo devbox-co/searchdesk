@@ -1,0 +1,131 @@
+<% content_for :title, @run.template.name %>
+<div class="schedule-view">
+  <header class="rank-heading schedule-page-heading">
+    <div>
+      <h1><%= @run.template.name %></h1>
+      <p class="rank-intro">Reporting period through <%= @run.period_on %><% unless @run.template_key == "R3" %> · <%= @run.effective_status.humanize %><% end %></p>
+    </div>
+    <div class="schedule-actions">
+      <%= link_to "All SEO tasks", seo_workflows_path, class: "button" %>
+      <%= link_to "Workflow setup", setup_seo_workflows_path(anchor: @run.template_key), class: "button" %>
+      <% if SeoWorkflows::Catalogue::PREVIEW_KEYS.include?(@run.template_key) %>
+        <%= link_to "Preview current period", evidence_preview_seo_workflows_path(template: @run.template_key), class: "button" %>
+      <% end %>
+    </div>
+  </header>
+
+  <% if @run.template_key == "R3" %>
+    <%= render "rollup", run: @run %>
+  <% else %>
+  <% evidence_rows = @run.result %>
+  <% if (entry = evidence_rows.find { |row| row["weekly_performance"] }) %>
+    <%= render "seo_workflows/weekly_performance", weekly: entry.fetch("weekly_performance") %>
+    <% evidence_rows = evidence_rows - [entry] %>
+  <% end %>
+  <% if (entry = evidence_rows.find { |row| row["quarterly_review"] }) %>
+    <% review = entry.fetch("quarterly_review") %>
+    <%= render "seo_workflows/quarterly_review", review: review %>
+    <% evidence_rows = evidence_rows - [entry] - review.fetch("competitors") - review.fetch("ai_evidence") %>
+  <% end %>
+  <section class="schedule-section">
+    <h2>Evidence</h2>
+    <% if @collection && @collection.metrics["state"].in?(%w[collecting submitted]) && @run.template_key == "M2" %>
+      <p>Awaiting provider results. The worker checks again every 15 minutes. <%= link_to "View collection receipt", source_snapshot_path(@collection) %></p>
+    <% elsif @collection && @collection.metrics["state"] != "captured" %>
+      <p>Live provider evidence could not be confirmed. <%= link_to "View collection receipt", source_snapshot_path(@collection) %></p>
+    <% end %>
+    <% if evidence_rows.empty? %>
+      <p>No eligible saved evidence was available for this reporting period.</p>
+    <% else %>
+      <ul>
+        <% evidence_rows.each do |row| %>
+          <li>
+            <strong><%= row.fetch("source") %></strong> · <%= row.fetch("text") %> <%= link_to "View source", row.fetch("path"), class: "schedule-source-link" %>
+            <% if row["baseline_path"] %>
+              <%= link_to "View comparison sample", row.fetch("baseline_path"), class: "schedule-source-link" %>
+            <% end %>
+            <% if @run.landing_page_draft? && row["brief_id"] %>
+              <%= link_to "View landing page brief", source_snapshot_path(row.fetch("brief_id")) %>
+              <% if row["draft"] %><pre class="schedule-draft"><%= row.fetch("draft") %></pre><% end %>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+  </section>
+
+  <% end %>
+
+  <% if @publications && @run.status == "approved" %>
+    <section class="schedule-section">
+      <h2>Google Business Profile publication</h2>
+      <% if @publication_connection&.connected? %>
+        <p>Target · Google account <%= @publication_connection.account_id %> · location <%= @publication_connection.location_id %> · <%= current_site.host %></p>
+      <% end %>
+      <ol>
+        <% @run.result.each_index do |index| %>
+          <% draft = BusinessProfilePublication.draft(@run, index) %>
+          <% next unless draft %>
+          <li>
+            <p><%= draft.fetch(:text) %></p>
+            <% if draft[:review_id] %><p>Unanswered review · <%= draft[:review_id] %> · <%= draft[:rating] %> out of 5</p><% end %>
+            <% if (publication = @publications[index]) %>
+              <p><%= publication.status.humanize %></p>
+              <% if publication.status == "uncertain" %><p>Check the listing in Google before making another change.</p><% end %>
+            <% elsif @publication_connection&.connected? %>
+              <%= button_to(draft[:review_id] ? "Publish this reply to Google" : "Publish this post to Google",
+                publish_seo_workflow_path(@run), params: { row_index: index, grant: @publication_connection.grant_revision }, class: "button") %>
+            <% end %>
+          </li>
+        <% end %>
+      </ol>
+    </section>
+  <% end %>
+
+  <% if @run.template.tier != :autonomous && @run.result.any? %>
+    <section class="schedule-section">
+      <h2>Review and delivery</h2>
+      <p>Review the evidence before sharing this report or applying any changes. Use the approved draft for manual publication or email delivery where offered.</p>
+      <% if @run.reviewed_at %><p>Decision recorded <%= schedule_timestamp(@run.reviewed_at) %>.</p><% end %>
+      <% if @run.delivered_at %><p>Delivery recorded <%= schedule_timestamp(@run.delivered_at) %>.</p><% end %>
+      <% if workspace_owner? && @run.effective_status == "awaiting_approval" %>
+        <% if @run.landing_page_draft? %>
+          <%= button_to "Refresh pending draft", refresh_draft_seo_workflow_path(@run), method: :patch, class: "button" %>
+        <% end %>
+        <%= button_to "Approve draft", review_seo_workflow_path(@run), method: :patch,
+          params: { decision: "approve", revision: @run.draft_revision }.compact, class: "button solid" %>
+        <%= button_to "Reject draft", review_seo_workflow_path(@run), method: :patch,
+          params: { decision: "reject", revision: @run.draft_revision }.compact, class: "button" %>
+      <% elsif workspace_owner? && @run.template.tier == :notify && @run.status == "approved" %>
+        <% if (delivery = @run.report_delivery) %>
+          <% if delivery.status == "preview" %>
+            <p>Recipient · <strong><%= delivery.recipient %></strong></p>
+            <p>The email will contain the reporting period and evidence text shown above.</p>
+            <% if delivery.requested_by_id == current_user.id && SeoWorkflowReportDelivery.enabled_for?(current_user) %>
+              <%= button_to "Confirm email delivery", confirm_delivery_seo_workflow_path(@run), method: :patch,
+                params: { delivery_id: delivery.id }, class: "button solid" %>
+            <% end %>
+            <%= button_to "Cancel preview", cancel_delivery_seo_workflow_path(@run), method: :delete,
+              params: { delivery_id: delivery.id }, class: "button" %>
+          <% else %>
+            <p>Email delivery · <%= delivery.status.humanize %></p>
+            <% if delivery.status == "cancelled" %>
+              <%= button_to "Clear cancelled delivery", cancel_delivery_seo_workflow_path(@run), method: :delete,
+                params: { delivery_id: delivery.id }, class: "button" %>
+            <% end %>
+            <% if delivery.status == "uncertain" %><p>Check your mail provider before attempting another delivery.</p><% end %>
+          <% end %>
+        <% else %>
+          <% if SeoWorkflowReportDelivery.enabled_for?(current_user) %>
+            <%= form_with url: preview_delivery_seo_workflow_path(@run), method: :post do |form| %>
+              <%= form.label :recipient, "Report recipient" %>
+              <%= form.email_field :recipient, required: true, maxlength: 254 %>
+              <%= form.submit "Preview email delivery", class: "button" %>
+            <% end %>
+          <% end %>
+          <%= button_to "Record manual delivery", record_delivery_seo_workflow_path(@run), method: :patch, class: "button" %>
+        <% end %>
+      <% end %>
+    </section>
+  <% end %>
+</div>

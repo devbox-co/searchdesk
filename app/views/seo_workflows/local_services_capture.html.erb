@@ -1,0 +1,19 @@
+<% content_for :title, "Local Services Ads evidence" %>
+<div class="schedule-view">
+  <header class="rank-heading schedule-page-heading">
+    <div>
+      <h1>Local Services Ads evidence</h1>
+      <p class="rank-intro"><%= @series.keyword.phrase %> · <%= @series.settings["location"] %> · <%= @series.device %> · <%= @capture.day %></p>
+    </div>
+    <div class="schedule-actions">
+      <%= link_to "Workflow setup", setup_seo_workflows_path(anchor: "M4"), class: "button" %>
+      <%= link_to "Current-period preview", evidence_preview_seo_workflows_path(template: "M4"), class: "button" %>
+    </div>
+  </header>
+  <section class="schedule-section">
+    <h2>DataForSEO search result</h2>
+    <p><%= Tracking::GoogleLocalServices.description(@sample) %></p>
+    <% if @sample.key?("ad_rows") %><p>Ads returned in the first panel · <%= @sample.fetch("ad_rows") %></p><% end %>
+    <p>This is evidence from one search, market and device. Account or campaign status is verified separately.</p>
+  </section>
+</div>

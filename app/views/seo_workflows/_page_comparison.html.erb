@@ -1,0 +1,23 @@
+<h3>Compare competitor pages</h3>
+<% if workspace_owner? %>
+  <p>Choose two public HTTPS pages for the same service. Up to three comparisons can be requested per site per day.</p>
+  <%= form_with url: compare_landing_pages_seo_workflows_path do |form| %>
+    <div class="field">
+      <%= form.label :own_page_url, "Your page URL" %>
+      <%= form.url_field :own_page_url, required: true, maxlength: 2048 %>
+    </div>
+    <div class="field">
+      <%= form.label :competitor_page_url, "Competitor page URL" %>
+      <%= form.url_field :competitor_page_url, required: true, maxlength: 2048 %>
+    </div>
+    <%= form.submit "Compare public pages", class: "button" %>
+  <% end %>
+<% end %>
+<% if samples.any? %>
+  <h3>Recent page comparisons</h3>
+  <ul>
+    <% samples.each do |sample| %>
+      <li><%= link_to "Open comparison", source_snapshot_path(sample) %> · <%= sample.observed_on %> · <%= SeoWorkflows::PageComparison.status_text(sample) %></li>
+    <% end %>
+  </ul>
+<% end %>

@@ -1,0 +1,131 @@
+<section class="schedule-section">
+  <h2>90-day summary</h2>
+  <p><%= review.fetch("start") %> through <%= review.fetch("end") %></p>
+  <p><%= review.fetch("summary").join(" ") %></p>
+</section>
+<section class="schedule-section">
+  <h2>Performance trends</h2>
+  <h3>Organic search</h3>
+  <% if review.fetch("rankings").empty? %>
+    <p>No comparable ranked pairs were available.</p>
+  <% else %>
+    <ul>
+      <% review.fetch("rankings").each do |item| %>
+        <li><strong><%= item.fetch("term") %></strong> · <%= item.fetch("device").capitalize %> ·
+          <%= item.fetch("first") %> on <%= item.fetch("first_on") %> → <%= item.fetch("last") %> on <%= item.fetch("last_on") %>
+          <%= link_to "View keyword history", item.fetch("source_path"), class: "schedule-source-link" %></li>
+      <% end %>
+    </ul>
+  <% end %>
+
+  <h3>Google Maps visibility</h3>
+  <% maps = review.fetch("maps") %>
+  <% if maps.empty? %>
+    <p>No verified Google Maps scan was available in the 90-day window.</p>
+  <% else %>
+    <p><%= maps.fetch("keyword") %></p>
+    <% if maps["baseline"] %>
+      <% unless maps["baseline_near_start"] %>
+        <p>A grid near the start of the 90-day window was unavailable. The comparison uses the earliest matching grid within the window.</p>
+      <% end %>
+      <% changes = maps.fetch("pin_changes") %>
+      <% if changes.any? %>
+        <p>On matched pins with a rank in both scans, <%= changes.fetch("improved", 0) %> improved, <%= changes.fetch("declined", 0) %> declined and <%= changes.fetch("unchanged", 0) %> held steady.</p>
+      <% else %>
+        <p>The matched grids had no pins with a rank in both scans.</p>
+      <% end %>
+    <% else %>
+      <p>A matching baseline grid was unavailable.</p>
+    <% end %>
+    <div class="quarterly-grids">
+      <% [maps["baseline"], maps.fetch("current")].compact.each do |reading| %>
+        <figure>
+          <figcaption>
+            <strong><%= reading.fetch("date") %></strong>
+            <p>Average rank <%= reading["arp"] || "unavailable" %> · Top-three coverage
+              <%= reading["solv"] ? number_to_percentage(reading["solv"], precision: 2, strip_insignificant_zeros: true) : "unavailable" %></p>
+          </figcaption>
+          <% if reading.fetch("pins").any? %>
+            <div class="lf-grid" style="--grid-size:<%= reading.fetch("size") || 1 %>" role="img" aria-label="Saved ranking pins for <%= reading.fetch("date") %>, north at the top">
+              <% reading.fetch("pins").each do |point| %>
+                <% rank = point["rank"] %>
+                <% band = case rank; when 1..3 then "top"; when 4..10 then "mid"; when 11..20 then "lower"; when "20+" then "outside"; else "missing"; end %>
+                <span class="lf-pin lf-pin-<%= band %>" style="left:<%= point.fetch("x") %>%;top:<%= point.fetch("y") %>%"><%= rank || "–" %></span>
+              <% end %>
+            </div>
+          <% end %>
+          <%= link_to "View saved scan", reading.fetch("source_path"), class: "schedule-source-link" %>
+        </figure>
+      <% end %>
+    </div>
+  <% end %>
+
+  <h3>Google reviews</h3>
+  <% reviews = review.fetch("reviews") %>
+  <p><%= reviews.fetch("covered") %> of <%= reviews.fetch("weeks").size %> full weeks have comparable review records.<% if reviews.fetch("covered").positive? %> Those weeks contain <%= pluralize(reviews.fetch("new_reviews"), "new review") %>.<% end %></p>
+  <% if reviews.key?("first_four_reviews") %>
+    <p>New reviews changed from <%= reviews.fetch("first_four_reviews") %> in the first four full weeks to <%= reviews.fetch("last_four_reviews") %> in the last four.</p>
+  <% end %>
+  <% if reviews.fetch("covered").positive? %>
+    <ul>
+      <% reviews.fetch("weeks").each do |week| %>
+        <li><%= week.fetch("week_ending") %> ·
+          <% if week["source_path"] %>
+            <%= pluralize(week.fetch("new_reviews"), "new review") %> · <%= week["average_rating"] ? "#{week['average_rating']} out of 5" : "rating unavailable" %>
+            <%= link_to "View weekly evidence", week.fetch("source_path"), class: "schedule-source-link" %>
+          <% else %>
+            Unavailable
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+</section>
+
+<section class="schedule-section">
+  <h2>Wins and issues</h2>
+  <h3>Wins</h3>
+  <% if review.fetch("winning_notes").any? %>
+    <ul><% review.fetch("winning_notes").each do |note| %><li><%= note %></li><% end %></ul>
+  <% else %>
+    <p>No improvement was confirmed by the available trend pairs.</p>
+  <% end %>
+  <h3>Issues</h3>
+  <% if review.fetch("issue_notes").any? %>
+    <ul><% review.fetch("issue_notes").each do |note| %><li><%= note %></li><% end %></ul>
+  <% else %>
+    <p>The measured trends did not identify a decline.</p>
+  <% end %>
+</section>
+
+<section class="schedule-section">
+  <h2>Competitive position</h2>
+  <%= render "seo_workflows/quarterly_sources", rows: review.fetch("competitors"), empty: "No local pack comparison or sample is available for this period." %>
+  <h2>AI visibility</h2>
+  <% trends = review.fetch("ai_trends") %>
+  <% if trends.empty? %>
+    <p>A same-question, same-engine citation trend is unavailable.</p>
+  <% else %>
+    <ul>
+      <% trends.each do |item| %>
+        <li><strong><%= item.fetch("engine") %></strong> · <%= item.fetch("market") %> ·
+          <%= item.fetch("first_cited") ? "Site cited" : "Site link absent" %> on <%= item.fetch("first_on") %> →
+          <%= item.fetch("last_cited") ? "site cited" : "site link absent" %> on <%= item.fetch("last_on") %>
+          <%= link_to "View source", item.fetch("source_path"), class: "schedule-source-link" %>
+          <%= link_to "View comparison sample", item.fetch("comparison_path"), class: "schedule-source-link" %>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+  <%= render "seo_workflows/quarterly_sources", rows: review.fetch("ai_evidence"), empty: "No AI visibility evidence was saved for this period." %>
+</section>
+
+<section class="schedule-section">
+  <h2>Priorities for the next quarter</h2>
+  <ol>
+    <% review.fetch("priorities").each do |priority| %>
+      <li><strong><%= priority.fetch("action") %></strong> <%= priority.fetch("measure") %>
+        <%= link_to "View evidence or setup", priority.fetch("source_path"), class: "schedule-source-link" %></li>
+    <% end %>
+  </ol>
+</section>

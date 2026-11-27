@@ -1,0 +1,50 @@
+<% run = @advice_run %>
+<% if @advice_interrupted %>
+  <div class="cp-advice-request">
+    <p role="status">This request is taking longer than expected. Check whether a result was saved.</p>
+    <%= button_to "Check interrupted request", recommendation_competing_page_path(@finding, keyword_id: @keyword&.id),
+      params: {version: @finding.updated_at.iso8601(6)}, class: "button", form: {data: {turbo: false}} %>
+  </div>
+<% elsif run&.status.in?(%w[pending running]) %>
+  <div class="cp-advice-request" data-ai-pending>
+    <p role="status"><%= run.status == "pending" ? "Your AI recommendation is queued." : "Your AI recommendation is being prepared." %></p>
+    <%= button_to "Check status", competing_page_path(@finding, anchor: "ai-recommendation"), method: :get,
+      params: {keyword_id: @keyword&.id}.compact, class: "button", form: {data: {turbo: false}} %>
+  </div>
+<% elsif run&.failure_code == "one_supported_choice" %>
+  <p class="cp-note">The SEO playbook identified one supported next step. This review used no AI credit.</p>
+<% elsif run&.failure_code == "invalid_response" %>
+  <p class="cp-note" role="status">OpenAI did not return a usable decision. The recommendation above comes from the SEO playbook and your saved search figures.<% if run.actual_microusd.nil? %> The cost of that request is unknown, so its allowance remains reserved.<% end %></p>
+<% elsif run && run.status != "complete" %>
+  <p class="cp-note" role="status">An AI recommendation is unavailable. <%= ai_failure_guidance(run) %></p>
+<% end %>
+
+<% if @advice_available && (run.nil? || @advice_waiting_for_worker || run.page_advice_retryable?) %>
+  <div class="cp-advice-request">
+    <% label = if @advice_waiting_for_worker then "Finish queued recommendation"
+      elsif run&.failure_code == "invalid_response" then "Try AI again"
+      elsif run then "Retry AI recommendation"
+      else "Get AI recommendation" end %>
+    <%= button_to recommendation_competing_page_path(@finding, keyword_id: @keyword&.id),
+      params: {version: @finding.updated_at.iso8601(6), retry_run_id: (run.id if run&.page_advice_retryable?)}.compact,
+      class: "button", form_class: "cp-advice-form", form: {data: {turbo: false}} do %>
+      <%= rank_icon_text(:sparkles, label) %>
+    <% end %>
+    <span class="cp-note" role="status" data-review-progress hidden>Preparing your recommendation…</span>
+    <p class="cp-note">
+      <% if @advice_waiting_for_worker %>The background worker is offline. You can finish this request here.
+      <% elsif run&.failure_code == "invalid_response" %>Trying again uses your workspace’s OpenAI allowance for a new request. The previous usage stays recorded.
+      <% else %>If an AI comparison is needed, it uses your workspace’s OpenAI allowance.<% end %>
+    </p>
+  </div>
+<% elsif !@advice_available && !run&.status.in?(%w[pending running complete]) && run&.failure_code != "one_supported_choice" %>
+  <p class="cp-note">
+    <% if @connection.status == "reconnect" %>
+      <%= link_to "Reconnect Search Console", search_console_path %> to use these figures for AI advice.
+    <% elsif workspace_owner? %>
+      For AI advice, check the OpenAI connection, allowance and Google data sharing in <%= link_to "Assistant settings", assistant_settings_path %>.
+    <% else %>
+      The workspace owner manages AI access and Google data sharing for this site.
+    <% end %>
+  </p>
+<% end %>

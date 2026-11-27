@@ -1,0 +1,11 @@
+<% if previous %>
+  <% change = current <=> previous %>
+  <% outcome = if change.zero?
+    "→ steady"
+  elsif lower_is_better ? change.negative? : change.positive?
+    "↑ improved"
+  else
+    "↓ declined"
+  end %>
+  · <%= outcome %> from <%= previous %><%= unit %>
+<% end %>

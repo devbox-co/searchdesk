@@ -1,0 +1,29 @@
+<% content_for :title, "Live prospect audits" %>
+<div class="schedule-view">
+  <header class="rank-heading schedule-page-heading">
+    <div>
+      <%= link_to "All SEO tasks", seo_workflows_path, class: "back" %>
+      <h1>Live prospect audits</h1>
+      <p class="rank-intro">Private sales preparation for <%= current_site.name %>.</p>
+    </div>
+    <%= link_to "New prospect audit", new_prospect_audit_path, class: "button solid" %>
+  </header>
+  <section class="schedule-section">
+    <h2>Recent prospect audits</h2>
+    <% if @audits.empty? %>
+      <p>No prospect audits yet.</p>
+    <% else %>
+      <ul class="schedule-list" role="list">
+        <% @audits.each do |audit| %>
+          <li class="schedule-row">
+            <div class="schedule-identity">
+              <h3><%= link_to audit.business_name, prospect_audit_path(audit) %></h3>
+              <p><%= audit.target_host %> · <%= audit.market %> · <%= audit.requested_on %></p>
+            </div>
+            <p>Website · <%= audit.website_status.humanize %></p>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+  </section>
+</div>

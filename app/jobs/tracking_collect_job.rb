@@ -45,7 +45,7 @@ class TrackingCollectJob < ApplicationJob
 
   def reserve_submission(slot)
     DailySlot.transaction do
-      DailySlot.connection.execute("SELECT pg_advisory_xact_lock(624003017)")
+      Tracking::DataForSeoBudget.lock!
       slot.lock!
       return false unless slot.task_id.nil? && slot.attempted_at.nil? && %w[held pending].include?(slot.status)
       unless Tracking::DataForSeo.series_allowed?(slot.tracking_series_id)
@@ -53,13 +53,13 @@ class TrackingCollectJob < ApplicationJob
         return false
       end
       now = Time.current.utc
-      if DailySlot.where(attempted_at: now.beginning_of_day..).count >= Tracking::DataForSeo.daily_task_limit
+      if Tracking::DataForSeoBudget.daily_full?(now)
         hold(slot, "Daily provider task limit reached", 1.hour)
         return false
       end
       # A rolling 31 × 24h interval can include parts of 32 UTC calendar dates.
       # Count every reservation, including interrupted and unconfirmed submissions.
-      if DailySlot.where("attempted_at > ?", now - 31.days).count >= Tracking::DataForSeo.rolling_task_limit
+      if Tracking::DataForSeoBudget.rolling_full?(now)
         hold(slot, "Rolling 31-day provider task limit reached", 5.minutes)
         return false
       end

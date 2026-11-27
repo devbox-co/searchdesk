@@ -7,6 +7,9 @@ Searchdesk brings local Google rankings, Search Console performance and Google M
 [![Try the live demo](https://img.shields.io/badge/Try_the_live_demo-238636?style=for-the-badge)](https://searchdesk.devboxtech.co.uk/signup)
 [![Talk to Devbox](https://img.shields.io/badge/Talk_to_Devbox-238636?style=for-the-badge)](https://devboxtech.co.uk/contact/)
 
+
+Workspace owners can run scheduled local SEO workflows and download a private Local SEO Brain vault with weekly performance reports and saved Maps grids. [Workflow coverage and setup](docs/seo-workflows.md)
+
 ## Try the live demo
 
 1. [Create a workspace](https://searchdesk.devboxtech.co.uk/signup), or [sign in](https://searchdesk.devboxtech.co.uk/login) if you already have an account.

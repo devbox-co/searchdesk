@@ -41,6 +41,13 @@ module SiteAudits
               body << chunk
             end
           end
+          if !robots && body.present? && (charset = response.type_params["charset"]).present?
+            begin
+              body.force_encoding(Encoding.find(charset.delete(%q{"'})))
+            rescue ArgumentError
+              raise Error, "The page declared an unsupported character encoding."
+            end
+          end
           # Leave the session from inside its response block. Net::HTTP otherwise drains an ignored body.
           return Response.new(status, response["location"], type, response.get_fields("x-robots-tag").to_a.join(", ").first(4096), body)
         end

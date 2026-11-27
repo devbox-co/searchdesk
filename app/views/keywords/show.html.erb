@@ -8,7 +8,7 @@
     <%= link_to rank_icon_text(:plus, "Import observation"), new_keyword_rank_import_path(@keyword, device: @device), class: "button solid" %>
   <% end %></header>
 
-  <div class="rank-page-assignment"><div><span class="rank-assignment-label"><%= rank_icon_text(:flag, "Preferred page", size: 15) %></span>
+  <div class="rank-page-assignment" id="preferred-page"><div><span class="rank-assignment-label"><%= rank_icon_text(:flag, "Preferred page", size: 15) %></span>
       <% if @keyword.preferred_url.present? %><%= rank_page_link(@keyword.preferred_url) %><% else %><span>Unassigned</span><% end %></div>
     <% if can_manage_site? %><details class="rank-edit"><summary>Change preferred page</summary>
       <%= form_with scope: :keyword, url: preferred_page_keyword_path(@keyword), method: :patch do |f| %>
@@ -21,7 +21,7 @@
   <section class="rank-panel">
     <div class="rank-panel-header"><div><h2>Observation history</h2>
       <p><% if @series %>Source · <%= @series.source == "demo" ? "Simulated demonstration" : @series.source.humanize %><% else %>Local organic rank<% end %></p></div>
-      <nav class="rank-device-tabs" id="keyword-devices" aria-label="Ranking device"><% %w[desktop mobile].each do |device| %>
+      <nav class="rank-device-tabs" id="keyword-devices" aria-label="Ranking device"><% %w[mobile desktop].each do |device| %>
         <%= link_to rank_icon_text(device == "mobile" ? :smartphone : :monitor, device.capitalize), keyword_path(@keyword, device: device, range: @range, before: params[:before], anchor: "keyword-devices"),
           id: "keyword-rank-#{device}", data: { turbo_frame: "keyword-filters" }, aria: {current: device == @device ? "page" : nil} %>
       <% end %></nav>

@@ -1,0 +1,55 @@
+<h3>Google Maps geogrids</h3>
+<% if guide.maps_grid %>
+  <p>Latest grid · <%= guide.maps_grid.keyword %> · <%= guide.maps_grid.observed_on %>.
+    <%= link_to "View saved grid", source_snapshot_path(guide.maps_grid) %>
+    <% if workspace_owner? %>
+      <%= link_to "Download grid CSV for Local SEO Brain", geogrid_source_snapshot_path(guide.maps_grid) %>
+    <% end %>
+  </p>
+<% end %>
+<% if guide.maps_request %>
+  <p>Latest request · <%= guide.maps_request.keyword %> · <%= guide.maps_request.observed_on %> ·
+    <%= link_to LocalFalcon::ScanCollection.status_text(guide.maps_request), source_snapshot_path(guide.maps_request) %>.</p>
+<% end %>
+<% if workspace_owner? %>
+  <% if guide.maps_revision && guide.maps_keywords.any? %>
+    <details>
+      <summary>Request a live Local Falcon scan</summary>
+      <p>One request per site per day. The scan centres on the verified listing. Local Falcon charges one existing credit per pin. AI analysis is off.</p>
+      <%= form_with url: request_maps_scan_seo_workflows_path, class: "schedule-evidence-form" do |form| %>
+        <%= form.hidden_field :revision, value: guide.maps_revision %>
+        <div class="field">
+          <%= form.label :keyword_id, "Tracked keyword" %>
+          <%= form.select :keyword_id, guide.maps_keywords.map { |keyword| [keyword.phrase, keyword.id] } %>
+        </div>
+        <div class="field">
+          <%= form.label :size, "Grid size and credits" %>
+          <%= form.select :size, LocalFalcon::ScanCollection::SIZES.map { |size| ["#{size} × #{size} · #{size**2} credits", size] }, selected: 5 %>
+        </div>
+        <div class="field">
+          <%= form.label :radius, "Radius in miles" %>
+          <%= form.number_field :radius, value: 3, min: 0.1, max: 100, step: 0.01, required: true %>
+        </div>
+        <label><%= form.check_box :approved, { required: true }, "1", "0" %> Use the listed number of Local Falcon credits</label>
+        <%= form.submit "Request Google Maps scan", class: "button" %>
+      <% end %>
+    </details>
+  <% elsif !guide.maps_revision %>
+    <p>Connect Local Falcon and verify this site’s Google Business Profile to request or import a grid.</p>
+  <% else %>
+    <p>Add a tracked keyword to request a grid.</p>
+  <% end %>
+  <% if guide.maps_revision %>
+    <details>
+      <summary>Import an existing Local Falcon grid</summary>
+      <p>Paste a completed Google Maps report key for this site. Importing uses the existing report.</p>
+      <%= form_with url: import_maps_grid_seo_workflows_path do |form| %>
+        <div class="field">
+          <%= form.label :report_key, "Local Falcon report key" %>
+          <%= form.text_field :report_key, required: true, maxlength: 15, pattern: "[a-f0-9]{15}" %>
+        </div>
+        <%= form.submit "Import completed grid", class: "button" %>
+      <% end %>
+    </details>
+  <% end %>
+<% end %>

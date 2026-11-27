@@ -4,6 +4,11 @@ Searchdesk runs one Rails application image for the web service and background j
 
 Use the selected site's **Integrations** and **Schedules** pages for its current configuration, most recent results and worker health. Use fictional sites and synthetic provider responses for development tests. The public customer website and the Searchdesk dashboard have separate deployment targets.
 
+
+## Local SEO workflows
+
+Open **SEO workflows → Run or schedule tasks** to manage the 15 task templates. Workspace owners can open **Import or export evidence → Download Local SEO Brain vault** for a private ZIP containing dated R1 reports and saved M1 Maps grids. [Coverage and setup](seo-workflows.md)
+
 ## Implemented in the local build
 
 | Area | Working entry point | Acceptance contract |

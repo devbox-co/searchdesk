@@ -1,6 +1,7 @@
 source "https://rubygems.org"
 ruby file: ".ruby-version"
 
+gem "csv", "3.3.7"
 gem "rails", "~> 8.1.4", ">= 8.1.4.1"
 gem "pg", "~> 1.7"
 gem "puma", "~> 8.1"

@@ -35,10 +35,41 @@ class SchedulesSourcesTest < ActiveSupport::TestCase
 
   test "new sites see setup states without expecting a scheduled import or campaign" do
     result = rows
-    assert_equal 4, result.size
+    assert_equal 5, result.size
     assert_equal ["Not connected"], result.select { |r| r[:group] == :collection }.pluck(:status).uniq
     assert result.all? { |r| r[:last_at].nil? && r[:next_at].nil? }
     assert_equal "Unconfirmed", result.last[:status]
+  end
+
+  test "weekly page checks show their own collection history, retry and setup state" do
+    assert_equal "Not connected", row("competing-pages")[:status]
+    @site.update!(rank_country_code: "GB")
+    @site.keywords.create!(phrase: "bread")
+    connection = @site.create_search_console_connection!(status: "connected", property: "sc-domain:bakery.test",
+      refresh_token: "ok", synced_at: @now, data_through: Date.new(2026, 7, 14))
+    result = row("competing-pages")
+    assert_equal "Awaiting first check", result[:status]
+    assert_nil result[:last_at]
+    assert_equal Rails.application.routes.url_helpers.competing_pages_path, result[:path]
+
+    success = @now - 2.days
+    attempt = @now - 3.minutes
+    connection.update!(page_week_attempted_at: success - 1.minute, page_week_synced_at: success)
+    assert_equal "Enabled", row("competing-pages")[:status]
+    assert_equal success, row("competing-pages")[:last_at]
+    SearchConsolePageWeek.create!(site: @site, property: connection.property, country: "GBR", week_start: Date.new(2026, 7, 6),
+      query: "bread", device: "desktop", partial: true)
+    assert_equal "Some data incomplete", row("competing-pages")[:status]
+    connection.update!(page_week_sync_key: "claimed", page_week_attempted_at: attempt)
+    assert_equal "Collecting", row("competing-pages")[:status]
+    connection.update!(page_week_sync_key: nil, page_week_error: "HTTP 429")
+    result = row("competing-pages")
+    assert_equal "Retry pending", result[:status]
+    assert_equal attempt, result[:last_at]
+    assert_match(/Last successful collection/, result[:detail])
+    assert_match(/successful Search Console import/, result[:next_label])
+    connection.update!(status: "reconnect")
+    assert_equal "Reconnect", row("competing-pages")[:status]
   end
 
   test "Google and Falcon use their own success intervals and attempts control delayed retries" do

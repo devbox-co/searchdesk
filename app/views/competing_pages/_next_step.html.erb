@@ -1,0 +1,48 @@
+<section id="ai-recommendation" class="cp-card cp-next" aria-labelledby="cp-next">
+  <% advice = @advice_run&.answer if @advice_run&.status.in?(%w[complete fallback]) %>
+  <% if advice.present? && advice["decision"].present? %>
+    <p class="cp-advice-origin"><%= ui_icon(@advice_run.status == "complete" ? :sparkles : :evidence, size: 16) %>
+      <%= @advice_run.status == "complete" ? "Searchdesk AI recommendation" : "Recommendation from saved SEO evidence" %></p>
+    <h2 id="cp-next"><%= advice.fetch("decision") %></h2>
+    <p class="cp-advice-reason"><%= advice.fetch("reason") %></p>
+    <dl class="cp-advice-steps">
+      <div><dt>First step</dt><dd><%= advice.fetch("next_step") %></dd></div>
+      <div><dt>When to review</dt><dd><%= advice.fetch("revisit") %></dd></div>
+    </dl>
+    <details class="cp-advice-evidence">
+      <summary>Evidence behind this recommendation</summary>
+      <% anchors = {"cp-pages" => "Page change", "cp-weeks" => "Weekly page history", "cp-clicks" => "Clicks and appearances"} %>
+      <% cited = @advice_run.evidence.fetch("facts", []).index_by { |fact| fact["id"] }.values_at(*Array(advice["fact_ids"])).compact %>
+      <ul><% cited.each do |fact| %><li>
+        <%= fact.fetch("text") %>
+        <% anchor = anchors.keys.find { |key| fact["url"] == competing_page_path(@finding, anchor: key) } %>
+        <%= link_to anchors.fetch(anchor), "##{anchor}" if anchor %>
+      </li><% end %></ul>
+      <%= button_to "Remove my saved recommendation", assistant_run_path(@advice_run), method: :delete, class: "text-button",
+        form: {data: {turbo_confirm: "Remove this saved recommendation? Your decision and the spending receipt will be kept."}} %>
+    </details>
+  <% else %>
+    <h2 id="cp-next">What to do next</h2>
+    <p><%= @evidence.fetch("recommendation") %></p>
+  <% end %>
+  <% if can_manage_site? %><%= render "advice_request" %><% end %>
+  <% if @listing_target && (can_manage_site? || @listing_receipt) %>
+    <p><%= link_to "Compare the Google result with your page", "#listing-check", data: {turbo: false} %></p>
+  <% end %>
+  <% candidate = @evidence["recommended_page_url"] %>
+  <% if @evidence.fetch("pages").include?(candidate) && CompetingPages::Comparison.public_page(candidate, current_site.host) %>
+    <p><%= link_to "Open the page that took the lead", candidate, target: "_blank", rel: "noopener noreferrer" %></p>
+  <% end %>
+  <% if @finding.keyword && can_manage_site? %><%= link_to "Review your preferred page", keyword_path(@finding.keyword, device: @evidence.fetch("device"), anchor: "preferred-page") %><% end %>
+  <div class="cp-decision">
+    <strong><%= competition_decision(@finding.disposition) %></strong>
+    <% if can_manage_site? %>
+      <%= form_with url: competing_page_path(@finding, keyword_id: @keyword&.id), method: :patch do |f| %>
+        <%= hidden_field_tag :version, @finding.updated_at.iso8601(6) %>
+        <% [["monitor", "Monitor for now"], ["accepted_overlap", "Keep both pages"], ["open", "Reopen review"]].each do |value, label| %>
+          <% unless @finding.disposition == value %><%= f.button label, value: value, name: "disposition", class: "button" %><% end %>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+</section>

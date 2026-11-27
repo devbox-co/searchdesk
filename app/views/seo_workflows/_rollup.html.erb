@@ -1,0 +1,85 @@
+<section class="schedule-section">
+  <h2>Location portfolio</h2>
+  <% rows = SeoWorkflows::Rollup.visible_rows(current_site, run.result) %>
+  <% if rows.empty? %>
+    <p>Include at least two locations from this workspace and run R3 to see the portfolio.</p>
+  <% else %>
+    <% summary = SeoWorkflows::Rollup.summary(rows) %>
+    <p><strong><%= summary.fetch("coverage").humanize %></strong> · <%= summary.fetch("reported_locations") %> of <%= summary.fetch("total_locations") %> locations have a saved monthly report.</p>
+    <p>Review totals cover complete Monday–Sunday weeks inside the month. Ratings describe those new reviews. Maps changes compare the same keyword and grid against the previous month.</p>
+    <div class="rollup-table-shell" tabindex="0" role="region" aria-label="Location performance">
+      <table class="rollup-table">
+        <thead><tr>
+          <th scope="col">Location</th><th scope="col">Status</th><th scope="col">Maps visibility</th>
+          <th scope="col">Reviews</th><th scope="col">Issues</th>
+        </tr></thead>
+        <tbody>
+          <% summary.fetch("locations").each do |record| %>
+            <% maps = record.fetch("maps") %>
+            <% reviews = record.fetch("reviews") %>
+            <tr>
+              <th scope="row">
+                <%= record.fetch("name") %>
+                <% if record["report_id"] %>
+                  <%= button_to "Open monthly report", open_rollup_location_seo_workflows_path,
+                    params: { rollup_id: run.id, report_id: record.fetch("report_id") }, class: "button" %>
+                <% else %>
+                  <small>Monthly report missing</small>
+                <% end %>
+              </th>
+              <td><%= record.fetch("status") %></td>
+              <td>
+                <% if maps.any? %>
+                  <strong><%= maps.fetch("keyword") %></strong>
+                  <small><%= maps.fetch("observed_on") %></small>
+                  <div>ARP <%= maps.fetch("average_rank", "—") %><%= " (#{format('%+.2f', maps['arp_change'])})" if maps["arp_change"] %></div>
+                  <div>SoLV <%= maps["solv"] ? "#{maps['solv']}%" : "—" %><%= " (#{format('%+.2f', maps['solv_change'])} pp)" if maps["solv_change"] %></div>
+                  <small><%= maps["previous_on"] ? "Compared with #{maps['previous_on']}" : "Comparable grid unavailable" %></small>
+                <% else %>
+                  Unavailable
+                <% end %>
+              </td>
+              <td>
+                <% if reviews["count"] %>
+                  <div><%= pluralize(reviews.fetch("count"), "new review") %> · <%= reviews.fetch("covered_weeks") %>/<%= reviews.fetch("expected_weeks") %> weeks</div>
+                  <div><%= reviews["rating"] ? "#{reviews['rating']} / 5" : "Rating unavailable" %></div>
+                  <small><%= reviews["direction"] ? "#{reviews['direction'].humanize} per week vs prior month" : "Comparable review trend unavailable" %></small>
+                <% else %>
+                  Unavailable
+                <% end %>
+              </td>
+              <td>
+                <div><%= pluralize(record.fetch("critical_issues"), "critical finding") %></div>
+                <% if record.fetch("issues").any? %>
+                  <ul>
+                    <% record.fetch("issues").each do |issue, count| %>
+                      <li><%= SeoWorkflows::Rollup::ISSUES.fetch(issue) %><%= " (#{count})" if count.is_a?(Integer) %></li>
+                    <% end %>
+                  </ul>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+    <h3>Brand-level patterns</h3>
+    <% if summary.fetch("brand_patterns").empty? %>
+      <p>No issue was observed at three or more included locations.</p>
+    <% else %>
+      <ul>
+        <% summary.fetch("brand_patterns").each do |issue, count| %>
+          <li><%= SeoWorkflows::Rollup::ISSUES.fetch(issue) %> · <%= count %> of <%= summary.fetch("total_locations") %> locations</li>
+        <% end %>
+      </ul>
+    <% end %>
+    <% if summary.fetch("local_patterns").any? %>
+      <h3>Location-specific issues</h3>
+      <ul>
+        <% summary.fetch("local_patterns").each do |issue, count| %>
+          <li><%= SeoWorkflows::Rollup::ISSUES.fetch(issue) %> · <%= pluralize(count, "location") %></li>
+        <% end %>
+      </ul>
+    <% end %>
+  <% end %>
+</section>

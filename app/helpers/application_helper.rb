@@ -47,10 +47,11 @@ module ApplicationHelper
     [
       [:overview, "Overview", dashboard_path, %w[overviews]],
       [:rankings, "Rankings", rankings_path, %w[dashboard keywords rank_imports]],
-      [:actions, "Actions", actions_path, %w[keyword_actions action_drafts wording_settings]],
+      [:actions, "Actions", actions_path, %w[keyword_actions action_drafts wording_settings competing_pages]],
       [:audit, "Site audit", site_audit_path, %w[site_audits]],
       [:integrations, "Integrations", integrations_path, %w[integrations search_console analytics local_falcon_connections]],
       [:calendar, "Schedules", schedules_path, %w[schedules]],
+      [:calendar, "SEO workflows", setup_seo_workflows_path, %w[seo_workflows prospect_audits]],
       [:sparkles, "Assistant", assistant_path, %w[assistants assistant_settings]],
       [:tasks, "Project tasks", project_tasks_path, %w[project_tasks]],
       [:evidence, "Evidence", source_snapshots_path, %w[source_snapshots project_imports]]

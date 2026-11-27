@@ -1,0 +1,19 @@
+<h2>Dedicated Local Services Ads sample</h2>
+<dl class="facts">
+  <dt>Search term</dt><dd><%= sample.fetch("query") %></dd>
+  <dt>Market</dt><dd><%= sample.fetch("market") %></dd>
+  <dt>Collection status</dt><dd><%= sample.fetch("state").humanize %><%= " · Sandbox" if sample["sandbox"] %></dd>
+  <% if sample.key?("ad_rows") %>
+    <dt>Returned ads</dt><dd><%= sample.fetch("ad_rows") %></dd>
+    <dt>Match</dt><dd><%= sample.fetch("coverage").humanize %></dd>
+    <dt>Listing position</dt><dd><%= sample.fetch("listing_position", "Not measured") %></dd>
+  <% end %>
+</dl>
+<% if sample["top_three"] %>
+  <h2>Identified top-three listings</h2>
+  <ol>
+    <% sample.fetch("top_three").each do |listing| %>
+      <li><%= listing.fetch("name") %><%= " · Tracked listing" if listing["tracked"] %></li>
+    <% end %>
+  </ol>
+<% end %>

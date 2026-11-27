@@ -1,0 +1,153 @@
+<% content_for :title, "SEO tasks" %>
+<div class="schedule-view">
+  <header class="rank-heading schedule-page-heading">
+    <div>
+      <h1>SEO tasks</h1>
+      <p class="rank-intro">Run reports and monitor the evidence available for <%= current_site.name %>.</p>
+    </div>
+    <%= link_to "Workflow setup", setup_seo_workflows_path, class: "button" %>
+  </header>
+
+  <section class="schedule-section">
+    <h2>Notifications</h2>
+    <% if workspace_owner? %>
+      <% if current_site.seo_workflow_email_owner_id %>
+        <%= button_to "Turn off owner email alerts", notifications_seo_workflows_path, method: :patch,
+          params: { enabled: "0" }, class: "button" %>
+      <% elsif current_user.email_verified_at %>
+        <%= button_to "Email alerts to my verified address", notifications_seo_workflows_path, method: :patch,
+          params: { enabled: "1" }, class: "button" %>
+      <% else %>
+        <p>Verify your account email to turn on email alerts.</p>
+      <% end %>
+    <% end %>
+    <% if workspace_owner? %>
+      <details>
+        <summary>Slack alerts</summary>
+        <% if current_site.seo_slack_revision %>
+          <p>Slack alerts are connected for this site.</p>
+          <%= button_to "Disconnect Slack", slack_seo_workflows_path, method: :patch, params: { webhook: "" }, class: "button" %>
+        <% else %>
+          <%= form_with url: slack_seo_workflows_path, method: :patch do |form| %>
+            <%= form.label :webhook, "Incoming webhook for an authorised Slack channel" %>
+            <%= form.password_field :webhook, required: true, autocomplete: "off" %>
+            <%= form.submit "Connect Slack", class: "button" %>
+          <% end %>
+        <% end %>
+      </details>
+    <% end %>
+    <% if @notifications.any? %>
+      <ul>
+        <% @notifications.each do |event| %>
+          <li><%= link_to event.seo_workflow_run.template.name, seo_workflow_path(event.seo_workflow_run) %>
+            · <%= event.label %> · <%= schedule_timestamp(event.created_at) %></li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p>No task notifications yet.</p>
+    <% end %>
+  </section>
+
+  <% if workspace_owner? %>
+    <% if BusinessProfileConnection.allowed_for?(current_site) %>
+      <p><%= link_to "Manage Google Business Profile connection", business_profile_path, class: "button" %></p>
+    <% end %>
+    <section class="schedule-section">
+      <h2>Multi-location reporting</h2>
+      <p>Include this site in reports across opted-in locations in this workspace.</p>
+      <%= button_to(current_site.seo_workflow_rollup_enabled? ? "Remove this location" : "Include this location",
+        rollup_seo_workflows_path, method: :patch,
+        params: { enabled: current_site.seo_workflow_rollup_enabled? ? "0" : "1" }, class: "button") %>
+    </section>
+    <details id="workflow-evidence" class="schedule-section" <%= "open" if @evidence_kind || params[:vault] == "empty" %>>
+      <summary>Import or export evidence</summary>
+      <p><%= link_to "Download Local SEO Brain vault", download_brain_vault_seo_workflows_path, data: { turbo: false } %></p>
+      <p>Unzip the download and open the folder as a vault in Obsidian. It contains notes from your saved R1 reports and M1 Maps grids.</p>
+      <p><%= link_to "Download raw evidence (JSON)", export_evidence_seo_workflows_path %></p>
+      <p>Upload an authorised export for this site. Searchdesk stores a file fingerprint and the fields used by the task. Review names and text are discarded.</p>
+      <%= form_with url: import_evidence_seo_workflows_path, multipart: true, class: "schedule-evidence-form" do |form| %>
+        <%= form.label :kind, "Evidence type" %>
+        <%= form.select :kind, SeoWorkflows::EvidenceImport::KINDS.invert.to_a, selected: @evidence_kind %>
+        <% if (headers = SeoWorkflows::SetupGuide::IMPORT_HEADERS[@evidence_kind]) %>
+          <p>CSV headers <code class="workflow-import-columns"><%= headers %></code></p>
+        <% end %>
+        <% if @evidence_kind == SeoWorkflows::LandingPageBrief::KIND %>
+          <p>Optional storefront columns <code class="workflow-import-columns"><%= SeoWorkflows::LandingPageBrief::OPTIONAL_SCHEMA_FIELDS.join(",") %></code>.</p>
+          <p>Use a Schema.org type such as <code>MedicalClinic</code>, <code>BeautySalon</code> or <code>Plumber</code>. Supply both coordinates with five to nine decimal places. Enter regular hours as <code>Mo-Fr 09:00-17:00 | Sa 10:00-14:00</code>.</p>
+        <% end %>
+        <% if @evidence_kind == "citation_audit" %>
+          <p>Add the optional <code>listing_url</code> column to link to each public directory page. Use <code>unknown</code> for hidden fields and <code>unverified</code> when you could not confirm whether a listing exists.</p>
+        <% end %>
+        <%= form.label :observed_on, "Observation date" %>
+        <%= form.date_field :observed_on, required: true %>
+        <%= form.label :export, "CSV or reviews JSON (up to 256 KiB)" %>
+        <%= form.file_field :export, accept: ".csv,.json", required: true %>
+        <%= form.submit "Import evidence", class: "button" %>
+      <% end %>
+    </details>
+  <% end %>
+
+  <section class="schedule-section">
+    <h2>Task templates</h2>
+    <ul class="schedule-list" role="list">
+      <% @templates.each do |template| %>
+        <li class="schedule-row" id="task-<%= template.key %>">
+          <div class="schedule-identity">
+            <h3><%= template.name %></h3>
+            <p><%= template.tier.to_s.titleize %> · <%= template.cadence.to_s.humanize %></p>
+            <p><%= template.limitation %></p>
+            <%= link_to "Setup and inputs", setup_seo_workflows_path(anchor: template.key) %>
+          </div>
+          <% if template.available? %>
+            <div class="schedule-actions">
+              <span class="schedule-pill schedule-pill--<%= @scheduled.include?(template.key) ? 'good' : 'idle' %>"><%= @scheduled.include?(template.key) ? "Scheduled" : "Schedule off" %></span>
+              <% if workspace_owner? %>
+                <% if template.key == "P1" %>
+                  <%= link_to "Live prospect audits", prospect_audits_path, class: "button solid" %>
+                <% end %>
+                <% paid = LocalSeoData::Collection.enabled?(current_site, template.key) %>
+                <% run_label = template.key == "P1" ? "Run from imported evidence" : "Run now" %>
+                <%= button_to(paid ? "Run now with provider" : run_label, run_seo_workflows_path,
+                  params: { template: template.key }, class: "button") %>
+                <% if paid %>
+                  <% credit_note = { "M3" => "One Business Profile reading per day uses 5 provider credits.",
+                    "M4" => "One dedicated scan per week uses 2 provider credits." } %>
+                  <% if LocalSeoData::Collection.data_for_seo?(current_site, template.key) %>
+                    <% if template.key == "M2" %>
+                      <p>One billable DataForSEO sample of up to 100 reviews per reporting week. Check the report after the worker retrieves the results.</p>
+                    <% else %>
+                      <p>One billable DataForSEO lookup per reporting day, within the configured task limits.</p>
+                    <% end %>
+                  <% else %>
+                    <p><%= credit_note.fetch(template.key, "Provider credits apply on the first collection per period.") %></p>
+                  <% end %>
+                <% end %>
+                <% if template.cadence != :on_demand %>
+                  <% enabled = @scheduled.include?(template.key) %>
+                  <% enable_label = LocalSeoData::Collection.scheduled?(current_site, template.key) ? "Enable paid schedule" : "Enable schedule" %>
+                  <%= button_to(enabled ? "Pause schedule" : enable_label, schedule_seo_workflows_path,
+                    params: { template: template.key, enabled: enabled ? "0" : "1" }, class: "button") %>
+                <% end %>
+              <% end %>
+            </div>
+          <% else %>
+            <p>Unavailable</p>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  </section>
+
+  <section class="schedule-section">
+    <h2>Recent results</h2>
+    <% if @runs.empty? %>
+      <p>No SEO task has run for this site.</p>
+    <% else %>
+      <ul>
+        <% @runs.each do |run| %>
+          <li><%= link_to run.template.name, seo_workflow_path(run) %> · through <%= run.period_on %> · <%= run.effective_status.humanize %></li>
+        <% end %>
+      </ul>
+    <% end %>
+  </section>
+</div>

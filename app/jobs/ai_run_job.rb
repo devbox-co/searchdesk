@@ -24,7 +24,21 @@ class AiRunJob < ApplicationJob
     AiAssistant::OpenaiClient.new
   end
 
-  def with_controls(connection, run)
+  def with_controls(connection, run, &work)
+    if run.kind == "page_advice"
+      # The collector and the Google settings screen can replace the source binding.
+      # Hold the same site/Google locks through dispatch so revocation and sending serialize.
+      run.site.with_lock do
+        SearchConsoleConnection.lock.find_by(site_id: run.site_id)
+        Membership.lock.find_by(workspace_id: run.site.workspace_id, user_id: run.user_id)
+        with_ai_controls(connection, run, &work)
+      end
+    else
+      with_ai_controls(connection, run, &work)
+    end
+  end
+
+  def with_ai_controls(connection, run)
     connection.with_lock do
       setting = AiSetting.lock.find_by(site_id: run.site_id)
       run.lock!
@@ -53,8 +67,11 @@ class AiRunJob < ApplicationJob
       next stop_before_send(run, "cancelled", "consent_changed") unless current?(run, connection, setting)
       next stop_before_send(run, "expired", "stale") if expired?(run)
       parent = allowed_parent(run, setting)
-      evidence = if run.kind == "test"
+      evidence = case run.kind
+      when "test"
         AiAssistant::Recipe.synthetic_evidence
+      when "page_advice"
+        CompetingPages::Advice.build(finding: run.site_finding, setting:)
       else
         AiAssistant::Evidence.build(site: run.site, setting: setting, day: run.report_on,
           kind: run.kind, question: run.question, parent: parent)
@@ -62,6 +79,11 @@ class AiRunJob < ApplicationJob
       if run.kind == "question" && evidence.fetch("facts").empty? && AiAssistant::Playbooks.for_question(run.question)
         answer = AiAssistant::Recipe.render({ "findings" => [] }, [], kind: "question")
         run.update!(status: "complete", evidence:, answer:, actual_microusd: 0, finished_at: Time.current)
+        next
+      end
+      if run.kind == "page_advice" && evidence.fetch("facts").first.fetch("eligible_decisions").one?
+        answer = AiAssistant::Recipe.fallback(evidence.fetch("facts"), kind: run.kind)
+        run.update!(status: "fallback", failure_code: "one_supported_choice", evidence:, answer:, actual_microusd: 0, finished_at: Time.current)
         next
       end
       payload = AiAssistant::OpenaiClient.prepare(kind: run.kind, evidence: evidence,
@@ -75,8 +97,10 @@ class AiRunJob < ApplicationJob
         "facts_sha256" => Digest::SHA256.hexdigest(JSON.generate(payload.facts))
       }
       unless run.kind == "test"
-        evidence["receipt"]["playbooks"] = { "version" => AiAssistant::Playbooks::VERSION, "keys" => payload.playbook_keys }
+        version = run.kind == "page_advice" ? CompetingPages::Advice::VERSION : AiAssistant::Playbooks::VERSION
+        evidence["receipt"]["playbooks"] = { "version" => version, "keys" => payload.playbook_keys }
       end
+      evidence["receipt"]["response_format"] = CompetingPages::Advice::RESPONSE_FORMAT if run.kind == "page_advice"
       run.update!(status: "running", attempted_at: Time.current, reserved_microusd: payload.reservation_microusd, evidence: evidence)
       payload
     rescue AiAssistant::OpenaiClient::Error => e
@@ -144,7 +168,9 @@ class AiRunJob < ApplicationJob
   end
 
   def local_answer(run, payload)
-    run.kind == "test" ? {} : AiAssistant::Recipe.fallback(payload.facts)
+    return {} if run.kind == "test"
+    return AiAssistant::Recipe.fallback(payload.facts, kind: "page_advice") if run.kind == "page_advice"
+    AiAssistant::Recipe.fallback(payload.facts)
   end
 
   def record_failure(connection, run, payload, error)

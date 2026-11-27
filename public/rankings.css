@@ -63,33 +63,15 @@
 .rank-table-with-placement thead th:first-child { width:24%; }
 .rank-table-with-placement thead th:nth-child(2) { width:36%; }
 .rank-table-with-placement thead th:nth-child(3) { width:12%; }
-.rank-watchlist thead th:first-child { width:42%; }
-.rank-watchlist thead th:not(:first-child) { width:auto; }
-.rank-watchlist--placement thead th:first-child { width:25%; }
-.rank-watchlist--placement thead th:nth-child(2) { width:45%; background:#eaf0fb; }
-.rankings-view .rank-watchlist tbody :is(th,td) { vertical-align:top; padding-block:.95rem; }
-.rank-watchlist tbody .rank-placement { background:#f5f8fd; }
-.rank-watchlist tbody tr:hover .rank-placement { background:#edf3fc; }
-.rank-watchlist-reading { display:flex; align-items:center; flex-wrap:wrap; gap:.3rem .6rem; }
-.rank-placement-reading { flex-wrap:nowrap; }
-.rank-placement-reading > div { min-width:0; }
-.rank-watchlist-reading .rank-value { flex:none; font-size:1.5rem; line-height:1.1; letter-spacing:-.04em; }
-.rank-placement-reading .rank-feature { margin-top:0; }
-.rank-placement-type { font-size:.73rem; color:var(--muted); font-weight:600; }
-.rank-placement-comparisons {
-  display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,9rem),1fr));
-  gap:.55rem 1rem; margin:.55rem 0 0;
-}
-.rank-placement-comparisons dt { color:var(--muted); font-size:.74rem; font-weight:650; }
-.rank-placement-comparisons dd {
-  display:flex; align-items:center; flex-wrap:wrap; gap:.22rem .48rem; margin:.18rem 0 0;
-}
+.rank-placement-type { font-size:.73rem; color:var(--muted); margin-inline-start:.25rem; }
+.rank-placement-comparisons { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.35rem .7rem; margin:.45rem 0 0; }
+.rank-placement-comparisons dt { color:var(--muted); font-size:.68rem; font-weight:600; }
+.rank-placement-comparisons dd { margin:.15rem 0 0; }
 .rank-table tbody tr:last-child :is(th,td) { border-bottom:0; }
 .rank-table tbody tr:hover { background:#f8fafe; }
 .rank-table tbody .rank-term { color:var(--ink); font-size:.9rem; font-weight:650; text-align:left; }
 .rank-table tbody .rank-term > a { color:var(--ink); text-decoration:underline; text-decoration-color:#b5c3dc; text-underline-offset:.16em; }
 .rankings-view .rank-table small, .rank-sub { display:block; margin:.17rem 0 0; font-size:.72rem; font-weight:450; color:var(--muted); white-space:normal; }
-.rankings-view .rank-table .rank-placement-comparisons dd > small { margin:0; }
 .rank-table small a { color:var(--muted); text-decoration:underline; text-decoration-color:#adb9cc; text-underline-offset:.16em; }
 .rank-value { color:var(--ink); font-size:1rem; font-weight:680; font-variant-numeric:tabular-nums; }
 .rank-unmeasured { font-weight:500; color:var(--muted); font-size:.82rem; }
@@ -143,12 +125,6 @@
   .rankings-view .rank-table tbody th { grid-column:1/-1; }
   .rank-table tbody td::before { content:attr(data-label); content:attr(data-label) / ""; display:block; margin-bottom:.16rem; color:var(--muted); font-size:.65rem; font-weight:600; }
   .rankings-view .rank-table-with-placement tbody .rank-placement { grid-column:1/-1; }
-  .rankings-view .rank-watchlist tbody tr { grid-template-columns:minmax(0,1fr); gap:.68rem; }
-  .rankings-view .rank-watchlist tbody .rank-placement:nth-child(n) {
-    padding:.65rem .7rem; border:1px solid #dbe5f5; border-radius:.55rem;
-  }
-  .rankings-view .rank-watchlist tbody .rank-watchlist-organic:nth-child(n) { padding-inline:.7rem; }
-  .rankings-view .rank-watchlist .rank-watchlist-reading .rank-value { font-size:1.35rem; }
   .rank-table tbody td .rank-change { font-size:.7rem; }
   .rank-table .rank-term, .rank-table td { font-size:.8rem; }
   .rankings-view .rank-table .rank-value { font-size:.9rem; }

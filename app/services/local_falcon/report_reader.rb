@@ -24,13 +24,7 @@ module LocalFalcon
         raise Client::Error, "The saved link is not a Google Maps scan from this account." unless report["report_key"] == key && report["platform"] == "google"
         @place = report["place_id"]
       end
-      raise Client::Error, "The scan did not supply a valid Google Place ID." unless @place.is_a?(String) && @place.match?(/\A[A-Za-z0-9_-]{12,180}\z/)
-      locations = @client.read("listAllLocalFalconLocations", {query: @place}).fetch("locations")
-      location = locations.find { |l| l["place_id"] == @place && l["platform"] == "google" } if locations.is_a?(Array)
-      website = Tracking::ResultUrl.parse(location&.dig("url"))
-      unless website && Tracking::ResultUrl.host_matches?(@site.host, website.host)
-        raise Client::Error, "This Local Falcon listing’s verified website does not match this site. Check the Place ID and connected account."
-      end
+      location = verified_google_location
       scans = pages("listLocalFalconScanReports", {placeId: @place, platform: "google", fieldmask: SCAN_MASK,
         startDate: (@today - 31).strftime("%m/%d/%Y"), endDate: @today.strftime("%m/%d/%Y")}).filter_map { |row| scan(row) }
       grids = read_grids(scans)
@@ -52,6 +46,39 @@ module LocalFalcon
           "google_cid" => google_cid(location)}.compact }
     rescue KeyError, TypeError, ArgumentError, NoMethodError
       raise Client::Error, "Local Falcon returned an incomplete or invalid report. Previous evidence is retained."
+    end
+
+    def verified_google_location
+      raise Client::Error, "The scan did not supply a valid Google Place ID." unless @place.is_a?(String) && @place.match?(/\A[A-Za-z0-9_-]{12,180}\z/)
+      locations = @client.read("listAllLocalFalconLocations", {query: @place}).fetch("locations")
+      location = locations.find { |l| l["place_id"] == @place && l["platform"] == "google" } if locations.is_a?(Array)
+      website = Tracking::ResultUrl.parse(location&.dig("url"))
+      unless website && Tracking::ResultUrl.host_matches?(@site.host, website.host)
+        raise Client::Error, "This Local Falcon listing’s verified website does not match this site. Check the Place ID and connected account."
+      end
+      location
+    rescue KeyError, TypeError, NoMethodError
+      raise Client::Error, "Local Falcon returned an invalid saved location."
+    end
+
+    def completed_grid(key, expected: {}, center: nil)
+      raise Client::Error, "Enter a valid Local Falcon report key." unless REPORT_KEY.match?(key.to_s)
+      fields = (SCAN_MASK.split(",") | ScanGrid::FIELD_MASK.split(",") | %w[lat lng]).join(",")
+      data = @client.read("getLocalFalconReport", { reportKey: key, fieldmask: fields })
+      return if data["_mcp_status"] == "processing" || data["status"] == "pending" || data["code"] == 202
+
+      row = scan(data) if data["report_key"] == key
+      observed = row && row.fetch(:metrics).merge(keyword: row[:keyword]).slice(*expected.keys)
+      actual_center = %w[lat lng].map { |key| Float(data[key], exception: false) } if center
+      unless row && observed == expected && (!center || actual_center.zip(center).all? { |value, target| value && (value - target).abs < 0.0001 })
+        raise Client::Error, "The completed grid does not match this site or the requested settings."
+      end
+      grid = ScanGrid.from_report(data, row, @place)
+      return unless grid && grid.fetch("points").size == row.dig(:metrics, :grid_size)**2
+
+      [row, grid]
+    rescue ArgumentError, KeyError, TypeError, NoMethodError
+      raise Client::Error, "Local Falcon returned an incomplete grid."
     end
 
     private
@@ -110,7 +137,10 @@ module LocalFalcon
       # A scan can legitimately have no observed average. Pinned detail is bound separately.
       grid = Integer(row.fetch("grid_size"))
       raise ArgumentError unless grid.between?(1,21)
-      metrics = {place_id: @place, grid_size: grid, radius: Float(row.fetch("radius")), distance_unit: row.fetch("measurement")}
+      radius = Float(row.fetch("radius"))
+      unit = row.fetch("measurement")
+      raise ArgumentError unless radius.finite? && radius.positive? && %w[mi km].include?(unit)
+      metrics = {place_id: @place, grid_size: grid, radius: radius, distance_unit: unit}
       %w[arp atrp solv found_in].each do |field|
         next unless row[field].present? && row[field] != "-"
         n = Float(row[field])

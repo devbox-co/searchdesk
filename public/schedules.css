@@ -58,3 +58,91 @@
   .schedule-detail { margin-top: .75rem; }
   .schedule-checks { padding: .8rem; }
 }
+
+.schedule-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .55rem; }
+.schedule-actions form { margin: 0; }
+.schedule-evidence-form { display: grid; justify-items: start; gap: .45rem; }
+.schedule-evidence-form input, .schedule-evidence-form select { max-width: 100%; }
+
+.schedule-draft {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+
+.schedule-source-link {
+  display: inline-block;
+}
+
+.workflow-guide-task {
+  scroll-margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--line, #dce2ea);
+  border-radius: 0.6rem;
+}
+.workflow-guide-task .facts dd { overflow-wrap: anywhere; }
+.workflow-guide-task .schedule-actions { margin-top: .75rem; }
+.workflow-import-columns { overflow-wrap: anywhere; }
+.schedule-view details code { overflow-wrap: anywhere; }
+
+.rollup-table-shell {
+  overflow-x: auto;
+}
+
+.rollup-table {
+  width: 100%;
+  min-width: 46rem;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.rollup-table th,
+.rollup-table td {
+  padding: 0.65rem 0.75rem;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line, #dce3e0);
+}
+
+.rollup-table small,
+.rollup-table form {
+  display: block;
+  margin-top: 0.35rem;
+}
+
+.rollup-table ul {
+  margin: 0.35rem 0 0;
+  padding-inline-start: 1rem;
+}
+
+.quarterly-grids {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: 1rem;
+}
+
+.quarterly-grids figure {
+  min-width: 0;
+  margin: 0;
+}
+
+.quarterly-grids .lf-grid {
+  margin-block-end: 0.5rem;
+}
+
+.weekly-measures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+  gap: 0.9rem;
+}
+.weekly-measures > div {
+  min-width: 0;
+  padding: 0.85rem;
+  border: 1px solid var(--line, #dce3e0);
+  border-radius: 0.5rem;
+}
+.weekly-measures dt {
+  font-weight: 700;
+}
+.weekly-measures dd {
+  margin: 0;
+}

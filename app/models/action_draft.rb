@@ -1,5 +1,20 @@
 class ActionDraft < ApplicationRecord
+  OWNER_CHOICES = %w[keep_preferred prefer_ranking].freeze
+  OWNER_CHOICE_NOTE_LIMIT = 1000
+
   belongs_to :keyword_action
+  validates :owner_choice, inclusion: { in: OWNER_CHOICES }, allow_nil: true
+  validates :owner_choice_note, length: { maximum: OWNER_CHOICE_NOTE_LIMIT }
+
+  # These methods are called under the keyword and action locks. A crashed web
+  # request releases its claim after the crawl's maximum time has elapsed.
+  def link_check_running?
+    link_check_started_at.present? && link_check_started_at > 3.minutes.ago
+  end
+
+  def reuse_link_check?(recheck:)
+    link_checked_at.present? && (!recheck || link_checked_at > 1.minute.ago)
+  end
 
   def self.capture!(action)
     version, steps = SeoSkills::ActionReview.for(action.kind)

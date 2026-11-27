@@ -3,9 +3,10 @@ class AiRun < ApplicationRecord
   belongs_to :site
   belongs_to :user, optional: true
   belongs_to :parent, class_name: "AiRun", optional: true
+  belongs_to :site_finding, optional: true
   self.filter_attributes += %i[question evidence answer]
 
-  validates :kind, inclusion: { in: %w[question brief test] }
+  validates :kind, inclusion: { in: %w[question brief test page_advice] }
   validates :question, presence: true, length: { maximum: QUESTION_LIMIT }, if: -> { kind == "question" && !erased_at }
   validates :request_key, :report_on, presence: true
   validate :question_has_no_secret
@@ -17,6 +18,33 @@ class AiRun < ApplicationRecord
 
   def self.request_current_brief!(site:)
     request!(site: site, user: nil, kind: "brief", refresh_recipe: true)
+  end
+
+  def self.current_page_advice(finding:, user:)
+    AiAssistant::PageAdviceRequest.new(finding:, user:).current
+  end
+
+  def self.page_advice_available?(finding:, user:)
+    AiAssistant::PageAdviceRequest.new(finding:, user:).available?
+  end
+
+  def self.request_page_advice!(finding:, user:, retry_run_id: nil)
+    finding.site.with_lock do
+      AiAssistant::PageAdviceRequest.new(finding:, user:).create_or_reuse!(retry_run_id:)
+    end
+  end
+
+  def page_advice_retryable?
+    return false unless kind == "page_advice" && !erased_at && actual_microusd.present?
+    return true if status == "fallback" && failure_code == "invalid_response" && finished_at.present?
+    actual_microusd.zero? && (status.in?(%w[budget expired]) || (status.in?(%w[failed fallback cancelled]) &&
+      failure_code.in?(%w[consent_changed credits_exhausted reconnect rate_limited unavailable model_unavailable])))
+  end
+
+  def current_page_advice_scope?(for_user:)
+    return false unless user_id && for_user&.id == user_id && page_advice_digest.present? && !erased_at
+    request = AiAssistant::PageAdviceRequest.new(finding: site_finding, user: for_user)
+    request.site&.id == site_id && request.digest == page_advice_digest
   end
 
   def self.request!(site:, user:, kind:, question: nil, parent: nil, report_on: nil, request_key: nil, refresh_recipe: false)
@@ -72,6 +100,7 @@ class AiRun < ApplicationRecord
     return false unless connection.status == "ready" && setting&.enabled? && setting.site_id == site_id &&
       setting.revision == setting_revision
     return setting.daily_brief_enabled? if kind == "brief"
+    return current_page_advice_scope?(for_user: user) if kind == "page_advice"
     return false unless kind == "question" && setting.may_ask?(user: user)
     return true unless parent_id
     parent && parent.site_id == site_id && %w[question brief].include?(parent.kind) &&
@@ -80,6 +109,7 @@ class AiRun < ApplicationRecord
 
   def visible_to?(user:)
     return false unless user && !erased_at
+    return current_page_advice_scope?(for_user: user) if kind == "page_advice"
     role = Membership.where(user_id: user.id, workspace_id: site.workspace_id).pick(:role)
     return false unless role
     return role == "owner" && user_id == user.id if kind == "test"
@@ -102,7 +132,14 @@ class AiRun < ApplicationRecord
 
   def erase_content!
     site.with_lock do
-      ids = [id]
+      next if reload.erased_at
+      ids = if kind == "page_advice" && page_advice_digest.present?
+        # All attempts represent the same private recommendation. Removing the
+        # latest must not restore an earlier answer or leave an old request queued.
+        AiRun.where(site_id:, user_id:, kind:, page_advice_digest:).pluck(:id)
+      else
+        [id]
+      end
       while ids.any?
         rows = AiRun.where(site_id: site_id, id: ids, erased_at: nil)
         self.class.erase_rows!(rows)
@@ -117,6 +154,9 @@ class AiRun < ApplicationRecord
   end
 
   def self.purge_hidden_for!(site:, setting:)
+    where(site:, erased_at: nil, kind: "page_advice").find_each do |run|
+      run.erase_content! unless run.visible_to?(user: run.user)
+    end
     where(site: site, erased_at: nil, kind: %w[brief question]).where.not(evidence: {}).find_each do |run|
       run.erase_content! unless setting.enabled? && AiAssistant::Evidence.visible?(site: site, setting: setting, evidence: run.evidence)
     end

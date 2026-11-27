@@ -1,0 +1,34 @@
+<% content_for :title, "Business Profile connection" %>
+<div class="form-page">
+  <%= link_to "Back to SEO tasks", seo_workflows_path, class: "back" %>
+  <h1>Google Business Profile</h1>
+  <p>Connect your approved Google project to the Business Profile for <%= current_site.host %>.</p>
+  <%= button_to(@connection ? "Reconnect Google" : "Authorise Google", authorize_business_profile_path, class: "button solid") %>
+
+  <% if @connection %>
+    <%= form_with url: business_profile_path, method: :patch do |form| %>
+      <%= form.label :account_id, "Google account ID" %>
+      <%= form.text_field :account_id, value: @connection.account_id, inputmode: :numeric, required: true %>
+      <%= form.label :location_id, "Google location ID" %>
+      <%= form.text_field :location_id, value: @connection.location_id, inputmode: :numeric, required: true %>
+      <%= form.submit "Verify location", class: "button" %>
+    <% end %>
+    <% if @connection.connected? %>
+      <%= button_to "Read live profile and reviews", inspect_live_business_profile_path, class: "button" %>
+    <% end %>
+    <%= button_to "Disconnect Business Profile", business_profile_path, method: :delete, class: "button" %>
+  <% end %>
+
+  <% if @profile %>
+    <h2>Live profile from Google</h2>
+    <p><strong><%= @profile["title"] %></strong> · <%= @profile["websiteUri"] %></p>
+    <p><%= @profile.dig("categories", "primaryCategory", "displayName") %></p>
+    <h2>Recent reviews</h2>
+    <p>Up to 50 updated reviews. Use the reference and rating of an unanswered review in an authorised reply draft.</p>
+    <ul>
+      <% @reviews.each do |review| %>
+        <li><%= review.fetch("reference") %> · <%= review.fetch("rating") %> out of 5 · <%= review["answered"] ? "Replied" : "Unanswered" %></li>
+      <% end %>
+    </ul>
+  <% end %>
+</div>

@@ -1,0 +1,14 @@
+<% if rows.empty? %>
+  <p><%= empty %></p>
+<% else %>
+  <ul>
+    <% rows.each do |row| %>
+      <li><strong><%= row.fetch("source") %></strong> · <%= row.fetch("text") %>
+        <%= link_to "View source", row.fetch("path"), class: "schedule-source-link" %>
+        <% if row["baseline_path"] %>
+          <%= link_to "View comparison sample", row.fetch("baseline_path"), class: "schedule-source-link" %>
+        <% end %>
+      </li>
+    <% end %>
+  </ul>
+<% end %>

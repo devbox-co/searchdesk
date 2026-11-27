@@ -10,7 +10,7 @@ Rails.application.configure do
   config.ssl_options = { redirect: { exclude: ->(request) { request.path == "/up" } } }
   config.logger = ActiveSupport::TaggedLogging.logger($stdout)
   config.log_level = ENV.fetch("RAILS_LOG_LEVEL", "info")
-  config.silence_healthcheck_path = %r{\A/(?:up\z|password_resets/[^/]+(?:/edit)?\z|email_verification/[^/]+\z|search_console/callback\z)}
+  config.silence_healthcheck_path = %r{\A/(?:up\z|password_resets/[^/]+(?:/edit)?\z|email_verification/[^/]+\z|search_console/callback\z|business_profile/callback\z)}
   config.active_record.dump_schema_after_migration = false
   config.action_mailer.delivery_method = ENV["SMTP_HOST"].present? ? :smtp : :file
   config.action_mailer.file_settings = { location: Rails.root.join("tmp", "mail") }

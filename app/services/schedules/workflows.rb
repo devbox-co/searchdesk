@@ -58,7 +58,7 @@ module Schedules
         rank_eligibility(series, days.fetch(series.id), slot)
       end
       new_at = new_times.min
-      limit = submission_limit_at(new_at, provider) if source == "dataforseo" && new_at
+      limit = submission_limit_at(new_at) if source == "dataforseo" && new_at
       next_at = [poll_at, (new_at unless limit)].compact.min
       tally = current_slots.values.map(&:status).tally
       complete = tally.fetch("ranked", 0) + tally.fetch("outside", 0)
@@ -95,11 +95,11 @@ module Schedules
         end.min
     end
 
-    def submission_limit_at(timestamp, provider)
+    def submission_limit_at(timestamp)
       # Account-wide caps apply across sites. Expose only the limiting rule.
       utc = timestamp.utc
-      return "UTC daily task limit" if DailySlot.where(attempted_at: utc.beginning_of_day..).offset(provider.daily_task_limit - 1).exists?
-      return "rolling 31-day task limit" if DailySlot.where("attempted_at > ?", utc - 31.days).offset(provider.rolling_task_limit - 1).exists?
+      return "UTC daily task limit" if Tracking::DataForSeoBudget.daily_full?(utc)
+      return "rolling 31-day task limit" if Tracking::DataForSeoBudget.rolling_full?(utc)
       nil
     end
 

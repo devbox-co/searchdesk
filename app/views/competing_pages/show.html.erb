@@ -1,0 +1,70 @@
+<% content_for :title, "#{@evidence.fetch('query')} · Competing pages" %>
+<div class="cp-view">
+  <%= link_to rank_icon_text(:arrow_left, "Competing pages"), competing_pages_path(keyword_id: @keyword&.id), class: "rank-back" %>
+  <header class="cp-heading">
+    <p class="eyebrow">Competing pages · <%= current_site.name %></p>
+    <h1><%= @evidence.fetch("query") %></h1>
+    <p class="cp-source"><%= ui_icon(:globe, size: 15) %> Google Search Console · <%= competition_country(@evidence.fetch("country")) %> · <%= @evidence.fetch("device").capitalize %></p>
+    <%= render "freshness" %>
+  </header>
+  <%= render "next_step" %>
+  <%= render "listing_check" if @listing_target && (can_manage_site? || @listing_receipt) %>
+  <%= render "article_review", report: @article_receipt if @article_receipt %>
+  <div class="cp-summary">
+    <section class="cp-card" aria-labelledby="cp-pages">
+      <h2 id="cp-pages">Which page led?</h2>
+      <p class="cp-outcome"><%= competition_switches(@finding) %>.</p>
+      <% if @latest_switch %>
+        <p class="cp-transition">In the week beginning <time datetime="<%= @latest_switch.fetch(:week_start) %>"><%= compact_date(Date.iso8601(@latest_switch.fetch(:week_start))) %></time>,
+          <%= competition_pair_link(@latest_switch.fetch(:to), @pair) %> took the lead from <%= competition_pair_link(@latest_switch.fetch(:from), @pair) %>.</p>
+      <% else %>
+        <ul class="cp-page-list"><% @pair.each do |url| %>
+          <li><%= competition_pair_link(url, @pair) %>
+            <% if @last_clear_week && @last_clear_week["leader_url"] == url %>
+              <span class="cp-note"> · Led in the week beginning <%= compact_date(Date.iso8601(@last_clear_week.fetch("week_start"))) %></span>
+            <% end %>
+          </li>
+        <% end %></ul>
+      <% end %>
+      <% if @evidence["preferred_url"].present? %><p class="cp-note">Preferred page when checked · <%= competition_pair_link(@evidence["preferred_url"], @pair) %></p><% end %>
+    </section>
+    <section class="cp-card" aria-labelledby="cp-clicks">
+      <h2 id="cp-clicks">What happened to clicks?</h2>
+      <p class="cp-outcome cp-<%= @clicks.fetch("trend") %>"><%= competition_clicks(@clicks) %></p>
+      <dl class="cp-periods"><% %w[previous current].each do |period| %>
+        <div><dt><%= competition_period(@clicks.fetch("#{period}_start"), @clicks.fetch("#{period}_end")) %></dt>
+          <dd><%= @clicks[period].nil? ? "Incomplete data" : pluralize(@clicks[period], "click") %></dd></div>
+      <% end %></dl>
+      <% if @clicks["previous_impressions"] && @clicks["current_impressions"] %>
+        <p class="cp-note">Google showed your site <strong><%= number_with_delimiter(@clicks["previous_impressions"]) %></strong> times in the first period and <strong><%= number_with_delimiter(@clicks["current_impressions"]) %></strong> in the second.</p>
+      <% end %>
+      <p class="cp-note">Clicks to the whole site for this keyword, country and device.<% if @clicks["trend"] == "unknown" %> Google needs to report a total for every week to compare the periods.<% elsif @clicks["trend"] == "down" && @evidence.fetch("switch_count").positive? %> These figures alone cannot tell us whether the page change caused the drop.<% end %></p>
+    </section>
+  </div>
+  <section class="cp-card" aria-labelledby="cp-weeks">
+    <h2 id="cp-weeks">Which page led each week?</h2>
+    <p>The lead goes to the page Google showed most often for this search. Weeks with too little evidence break the comparison.</p>
+    <table class="cp-history">
+      <thead><tr><th scope="col">Week beginning</th><th scope="col">Most visible page</th></tr></thead>
+      <tbody><% @evidence.fetch("weeks").each do |week| %>
+        <tr><th scope="row"><time datetime="<%= week.fetch("week_start") %>"><%= compact_date(Date.iso8601(week.fetch("week_start"))) %></time></th>
+          <td><% if week["leader_url"] %>
+            <%= competition_pair_link(week["leader_url"], @pair) %>
+            <% if (leader = week.fetch("pages").find { |page| page["url"] == week["leader_url"] }) %>
+              <small><%= pluralize(leader.fetch("impressions"), "appearance") %></small>
+            <% end %>
+          <% else %><%= competition_week_state(week.fetch("state")) %><% end %></td>
+        </tr>
+      <% end %></tbody>
+    </table>
+  </section>
+  <% if @local_overlap %>
+    <section class="cp-card" aria-labelledby="cp-local">
+      <h2 id="cp-local">Local ranking check</h2>
+      <p>Both pages appeared in the same Google results on <%= compact_date(@local_overlap.fetch(:day)) %> in <%= @local_overlap.fetch(:location) %> on <%= @local_overlap.fetch(:device) %>.</p>
+      <ul class="cp-page-list"><% @local_overlap.fetch(:pages).each do |page| %>
+        <li><strong>#<%= page.fetch(:position) %></strong> <%= competition_pair_link(page.fetch(:url), @pair) %></li>
+      <% end %></ul>
+    </section>
+  <% end %>
+</div>

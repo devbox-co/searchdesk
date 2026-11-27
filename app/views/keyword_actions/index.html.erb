@@ -1,5 +1,10 @@
 <% content_for :title, "Actions" %>
 <div class="hero"><div><p class="eyebrow"><%= current_site.name %></p><h1>Actions</h1><p>Review the work your team has prioritised and the changes suggested by keyword readings.</p></div><%= link_to assistant_path(starter: "priority"), class: "button" do %><%= ui_icon(:sparkles) %> Ask about these actions<% end %></div>
+<section class="cp-entry" aria-labelledby="competing-pages-heading">
+  <div><h2 id="competing-pages-heading"><%= ui_icon(:layers) %> Competing pages</h2>
+    <p>See when two pages take turns appearing most often for a keyword and whether clicks have fallen.</p></div>
+  <%= link_to rank_icon_text(:arrow_right, "Review competing pages"), competing_pages_path(keyword_id: @keyword&.id), class: "button" %>
+</section>
 <% if @task_counts.present? %>
   <section class="project-actions" aria-labelledby="project-work-heading">
     <h2 id="project-work-heading"><%= ui_icon(:tasks) %> Project tasks</h2>
@@ -43,8 +48,10 @@
       <details><summary>Technical record</summary><pre><%= JSON.pretty_generate(item.evidence) %></pre></details>
     </details>
   <% end %>
-  <% if can_manage_site? %><div class="buttons">
-    <% if item.status == "open" %><%= button_to "Preview action", action_draft_path(item), method: :post, class: "button" %><% end %>
-    <%= button_to item.status == "open" ? "Mark reviewed" : "Reopen", action_path(item), method: :patch, params: {status: item.status == "open" ? "resolved" : "open"}, class: "button" %>
-  </div><% end %>
+  <div class="buttons">
+    <%= link_to "View next steps", action_draft_path(item), class: "button" %>
+    <% if can_manage_site? %>
+      <%= button_to item.status == "open" ? "Mark reviewed" : "Reopen", action_path(item), method: :patch, params: {status: item.status == "open" ? "resolved" : "open"}, class: "button" %>
+    <% end %>
+  </div>
 </article><% end %>

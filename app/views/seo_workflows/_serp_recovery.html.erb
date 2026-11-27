@@ -1,0 +1,7 @@
+<h3><%= action_label %></h3>
+<p>Retrieve evidence from an existing DataForSEO ranking task. This creates no new provider charges.</p>
+<%= form_with url: recovery_path, class: "schedule-evidence-form" do |form| %>
+  <%= form.label :series_id, "Tracked search and device" %>
+  <%= form.select :series_id, series.map { |entry| ["#{entry.keyword.phrase} · #{entry.settings['location']} · #{entry.device}", entry.id] }, { prompt: "Choose a tracked search" }, required: true %>
+  <%= form.submit action_label, class: "button" %>
+<% end %>

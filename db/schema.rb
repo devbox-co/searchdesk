@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_25_015000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_26_080000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -22,8 +22,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_015000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.jsonb "input_snapshot", default: {}, null: false
+    t.string "owner_choice"
+    t.string "owner_choice_note", limit: 1000
+    t.jsonb "link_check_result", default: {}, null: false
+    t.datetime "link_checked_at"
+    t.datetime "link_check_started_at"
     t.index ["keyword_action_id", "skill_version", "input_digest"], name: "unique_action_draft_input", unique: true
     t.index ["keyword_action_id"], name: "index_action_drafts_on_keyword_action_id"
+    t.check_constraint "owner_choice::text = ANY (ARRAY['keep_preferred'::character varying, 'prefer_ranking'::character varying]::text[])", name: "action_draft_owner_choice_valid"
   end
 
   create_table "ai_connections", force: :cascade do |t|
@@ -66,7 +72,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_015000) do
     t.datetime "erased_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "site_finding_id"
+    t.string "page_advice_digest", limit: 64
     t.index ["parent_id"], name: "index_ai_runs_on_parent_id"
+    t.index ["site_finding_id"], name: "index_ai_runs_on_site_finding_id"
     t.index ["site_id", "attempted_at"], name: "index_ai_runs_on_site_id_and_attempted_at", where: "(attempted_at IS NOT NULL)"
     t.index ["site_id", "report_on", "recipe_version"], name: "one_ai_brief_per_day_and_recipe", unique: true, where: "((kind)::text = 'brief'::text)", nulls_not_distinct: true
     t.index ["site_id", "request_key"], name: "index_ai_runs_on_site_id_and_request_key", unique: true
@@ -125,6 +134,33 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_015000) do
     t.index ["site_id"], name: "index_analytics_grants_on_site_id"
     t.index ["state_digest"], name: "index_analytics_grants_on_state_digest", unique: true
     t.index ["user_id"], name: "index_analytics_grants_on_user_id"
+  end
+
+  create_table "business_profile_connections", force: :cascade do |t|
+    t.bigint "site_id", null: false
+    t.text "refresh_token", null: false
+    t.string "grant_revision", null: false
+    t.string "account_id"
+    t.string "location_id"
+    t.string "site_host", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["site_id"], name: "index_business_profile_connections_on_site_id", unique: true
+  end
+
+  create_table "business_profile_publications", force: :cascade do |t|
+    t.bigint "seo_workflow_run_id", null: false
+    t.integer "row_index", null: false
+    t.bigint "confirmed_by_id"
+    t.string "status", null: false
+    t.string "grant_revision", null: false
+    t.text "provider_reference"
+    t.datetime "attempted_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["confirmed_by_id"], name: "index_business_profile_publications_on_confirmed_by_id"
+    t.index ["seo_workflow_run_id", "row_index"], name: "index_business_profile_publications_on_draft", unique: true
+    t.index ["seo_workflow_run_id"], name: "index_business_profile_publications_on_seo_workflow_run_id"
   end
 
   create_table "daily_slots", force: :cascade do |t|
@@ -253,6 +289,30 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_015000) do
     t.index ["site_id"], name: "index_project_tasks_on_site_id"
   end
 
+  create_table "prospect_audits", force: :cascade do |t|
+    t.bigint "site_id", null: false
+    t.bigint "requested_by_id"
+    t.string "site_host", null: false
+    t.string "target_host", null: false
+    t.string "business_name", null: false
+    t.string "market", null: false
+    t.string "keyword", null: false
+    t.date "requested_on", null: false
+    t.string "website_status", default: "queued", null: false
+    t.jsonb "website_report", default: {}, null: false
+    t.string "provider_status", default: "off", null: false
+    t.string "provider_job_id"
+    t.integer "provider_poll_count", default: 0, null: false
+    t.datetime "next_poll_at"
+    t.jsonb "provider_report", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["requested_by_id"], name: "index_prospect_audits_on_requested_by_id"
+    t.index ["site_id", "site_host", "requested_on", "target_host", "business_name", "market", "keyword"], name: "index_prospect_audits_on_daily_scope", unique: true
+    t.index ["site_id", "site_host", "requested_on"], name: "index_prospect_audits_on_site_and_day"
+    t.index ["site_id"], name: "index_prospect_audits_on_site_id"
+  end
+
   create_table "rank_observations", force: :cascade do |t|
     t.bigint "daily_slot_id", null: false
     t.datetime "captured_at", null: false
@@ -286,6 +346,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_015000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.uuid "ai_grant_revision", default: -> { "gen_random_uuid()" }, null: false
+    t.string "page_week_sync_key"
+    t.datetime "page_week_attempted_at"
+    t.datetime "page_week_synced_at"
+    t.string "page_week_error"
     t.index ["site_id"], name: "index_search_console_connections_on_site_id", unique: true
   end
 
@@ -302,6 +366,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_015000) do
     t.index ["user_id"], name: "index_search_console_grants_on_user_id"
   end
 
+  create_table "search_console_page_weeks", force: :cascade do |t|
+    t.bigint "site_id", null: false
+    t.string "property", null: false
+    t.string "country", limit: 3, null: false
+    t.string "query", null: false
+    t.string "device", null: false
+    t.date "week_start", null: false
+    t.jsonb "pages", default: [], null: false
+    t.bigint "clicks"
+    t.bigint "impressions"
+    t.boolean "partial", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["site_id", "property", "country", "query", "device", "week_start"], name: "unique_search_console_page_week", unique: true
+    t.index ["site_id"], name: "index_search_console_page_weeks_on_site_id"
+  end
+
   create_table "search_console_reports", force: :cascade do |t|
     t.bigint "search_console_connection_id", null: false
     t.string "property", null: false
@@ -311,6 +392,67 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_015000) do
     t.datetime "updated_at", null: false
     t.index ["search_console_connection_id", "property", "period_end"], name: "index_gsc_reports_by_binding_and_period", unique: true
     t.index ["search_console_connection_id"], name: "index_gsc_reports_on_connection"
+  end
+
+  create_table "seo_workflow_notifications", force: :cascade do |t|
+    t.bigint "seo_workflow_run_id", null: false
+    t.bigint "recipient_id"
+    t.string "kind", null: false
+    t.string "email_status", default: "off", null: false
+    t.datetime "email_attempted_at"
+    t.datetime "email_sent_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "slack_revision"
+    t.string "slack_status", default: "off", null: false
+    t.datetime "slack_attempted_at"
+    t.index ["email_status", "id"], name: "index_seo_workflow_notifications_on_email_status_and_id"
+    t.index ["recipient_id"], name: "index_seo_workflow_notifications_on_recipient_id"
+    t.index ["seo_workflow_run_id", "kind"], name: "index_seo_workflow_notifications_on_event", unique: true
+    t.index ["seo_workflow_run_id"], name: "index_seo_workflow_notifications_on_seo_workflow_run_id"
+    t.index ["slack_status", "id"], name: "index_seo_workflow_notifications_on_slack_status_and_id"
+  end
+
+  create_table "seo_workflow_report_deliveries", force: :cascade do |t|
+    t.bigint "seo_workflow_run_id", null: false
+    t.bigint "requested_by_id"
+    t.text "recipient", null: false
+    t.string "status", default: "preview", null: false
+    t.datetime "attempted_at"
+    t.datetime "sent_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["requested_by_id"], name: "index_seo_workflow_report_deliveries_on_requested_by_id"
+    t.index ["seo_workflow_run_id"], name: "index_seo_workflow_report_deliveries_on_seo_workflow_run_id", unique: true
+    t.index ["status", "id"], name: "index_seo_workflow_report_deliveries_on_status_and_id"
+  end
+
+  create_table "seo_workflow_runs", force: :cascade do |t|
+    t.bigint "site_id", null: false
+    t.string "template_key", null: false
+    t.string "site_host", null: false
+    t.date "period_on", null: false
+    t.string "status", null: false
+    t.jsonb "result", default: [], null: false
+    t.bigint "reviewed_by_id"
+    t.datetime "reviewed_at"
+    t.bigint "delivered_by_id"
+    t.datetime "delivered_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["delivered_by_id"], name: "index_seo_workflow_runs_on_delivered_by_id"
+    t.index ["reviewed_by_id"], name: "index_seo_workflow_runs_on_reviewed_by_id"
+    t.index ["site_id", "template_key", "site_host", "period_on"], name: "index_seo_workflow_runs_on_period_identity", unique: true
+    t.index ["site_id"], name: "index_seo_workflow_runs_on_site_id"
+  end
+
+  create_table "seo_workflow_schedules", force: :cascade do |t|
+    t.bigint "site_id", null: false
+    t.string "template_key", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["site_id", "template_key"], name: "index_seo_workflow_schedules_on_site_id_and_template_key", unique: true
+    t.index ["site_id"], name: "index_seo_workflow_schedules_on_site_id"
   end
 
   create_table "site_audits", force: :cascade do |t|
@@ -327,6 +469,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_015000) do
     t.index ["site_id", "created_at"], name: "index_site_audits_on_site_id_and_created_at"
     t.index ["site_id"], name: "index_site_audits_on_site_id"
     t.index ["site_id"], name: "one_active_site_audit", unique: true, where: "((status)::text = ANY (ARRAY[('queued'::character varying)::text, ('running'::character varying)::text]))"
+  end
+
+  create_table "site_findings", force: :cascade do |t|
+    t.bigint "site_id", null: false
+    t.bigint "keyword_id"
+    t.string "kind", null: false
+    t.string "fingerprint", null: false
+    t.string "level", null: false
+    t.boolean "active", default: true, null: false
+    t.string "disposition", default: "open", null: false
+    t.jsonb "evidence", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.jsonb "listing_check"
+    t.string "listing_check_token"
+    t.datetime "listing_check_started_at"
+    t.index ["keyword_id"], name: "index_site_findings_on_keyword_id"
+    t.index ["site_id", "active", "kind", "level"], name: "index_site_findings_on_site_id_and_active_and_kind_and_level"
+    t.index ["site_id", "kind", "fingerprint"], name: "index_site_findings_on_site_id_and_kind_and_fingerprint", unique: true
+    t.index ["site_id"], name: "index_site_findings_on_site_id"
   end
 
   create_table "site_report_links", force: :cascade do |t|
@@ -355,6 +517,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_015000) do
     t.string "rank_location_name"
     t.boolean "weekly_site_audit_enabled", default: false, null: false
     t.boolean "setup_tour_pending", default: false, null: false
+    t.boolean "seo_workflow_rollup_enabled", default: false, null: false
+    t.bigint "seo_workflow_email_owner_id"
+    t.text "seo_slack_webhook"
+    t.string "seo_slack_revision"
+    t.index ["seo_workflow_email_owner_id"], name: "index_sites_on_seo_workflow_email_owner_id"
     t.index ["workspace_id", "host"], name: "index_sites_on_workspace_id_and_host", unique: true
     t.index ["workspace_id"], name: "index_sites_on_workspace_id"
     t.check_constraint "tracking_mode::text = ANY (ARRAY['manual'::character varying::text, 'demo'::character varying::text, 'dataforseo'::character varying::text])", name: "site_tracking_mode_valid"
@@ -588,12 +755,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_015000) do
   add_foreign_key "action_drafts", "keyword_actions", on_delete: :cascade
   add_foreign_key "ai_connections", "workspaces", on_delete: :cascade
   add_foreign_key "ai_runs", "ai_runs", column: "parent_id", on_delete: :nullify
+  add_foreign_key "ai_runs", "site_findings", on_delete: :nullify
   add_foreign_key "ai_runs", "sites", on_delete: :cascade
   add_foreign_key "ai_runs", "users", on_delete: :nullify
   add_foreign_key "ai_settings", "sites", on_delete: :cascade
   add_foreign_key "analytics_connections", "sites", on_delete: :cascade
   add_foreign_key "analytics_grants", "sites", on_delete: :cascade
   add_foreign_key "analytics_grants", "users", on_delete: :cascade
+  add_foreign_key "business_profile_connections", "sites", on_delete: :cascade
+  add_foreign_key "business_profile_publications", "seo_workflow_runs", on_delete: :cascade
+  add_foreign_key "business_profile_publications", "users", column: "confirmed_by_id", on_delete: :nullify
   add_foreign_key "daily_slots", "tracking_series"
   add_foreign_key "keyword_actions", "tracking_series"
   add_foreign_key "keyword_page_assignments", "keywords"
@@ -604,13 +775,27 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_25_015000) do
   add_foreign_key "memberships", "users"
   add_foreign_key "memberships", "workspaces"
   add_foreign_key "project_tasks", "sites", on_delete: :cascade
+  add_foreign_key "prospect_audits", "sites", on_delete: :cascade
+  add_foreign_key "prospect_audits", "users", column: "requested_by_id", on_delete: :nullify
   add_foreign_key "rank_observations", "daily_slots"
   add_foreign_key "search_console_connections", "sites"
   add_foreign_key "search_console_grants", "sites", on_delete: :cascade
   add_foreign_key "search_console_grants", "users", on_delete: :cascade
+  add_foreign_key "search_console_page_weeks", "sites", on_delete: :cascade
   add_foreign_key "search_console_reports", "search_console_connections", on_delete: :cascade
+  add_foreign_key "seo_workflow_notifications", "seo_workflow_runs", on_delete: :cascade
+  add_foreign_key "seo_workflow_notifications", "users", column: "recipient_id", on_delete: :nullify
+  add_foreign_key "seo_workflow_report_deliveries", "seo_workflow_runs", on_delete: :cascade
+  add_foreign_key "seo_workflow_report_deliveries", "users", column: "requested_by_id", on_delete: :nullify
+  add_foreign_key "seo_workflow_runs", "sites", on_delete: :cascade
+  add_foreign_key "seo_workflow_runs", "users", column: "delivered_by_id", on_delete: :nullify
+  add_foreign_key "seo_workflow_runs", "users", column: "reviewed_by_id", on_delete: :nullify
+  add_foreign_key "seo_workflow_schedules", "sites", on_delete: :cascade
   add_foreign_key "site_audits", "sites", on_delete: :cascade
+  add_foreign_key "site_findings", "keywords", on_delete: :nullify
+  add_foreign_key "site_findings", "sites", on_delete: :cascade
   add_foreign_key "site_report_links", "sites", on_delete: :cascade
+  add_foreign_key "sites", "users", column: "seo_workflow_email_owner_id", on_delete: :nullify
   add_foreign_key "sites", "workspaces"
   add_foreign_key "solid_queue_batch_executions", "solid_queue_batches", column: "batch_id", on_delete: :cascade
   add_foreign_key "solid_queue_batch_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade

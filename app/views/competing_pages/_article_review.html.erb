@@ -1,0 +1,91 @@
+<% google, page, draft = report.values_at("google", "page", "draft") %>
+<section class="cp-card cp-listing" id="ranking-article" tabindex="-1" aria-labelledby="article-heading">
+  <h2 id="article-heading">Review of the page Google ranked</h2>
+  <div class="cp-verdict">
+    <strong><%= draft.fetch("decision") %></strong>
+    <p><%= draft.fetch("reason") %></p>
+  </div>
+  <div class="cp-listing-sources">
+    <section class="cp-listing-source" aria-labelledby="article-google">
+      <h3 id="article-google">Google result · Position <%= google.fetch("position") %></h3>
+      <p class="cp-note">“<%= @evidence.fetch("query") %>” · <%= listing_search_scope(google, @evidence.fetch("device")) %></p>
+      <p class="cp-note">Captured <%= listing_check_time(google.fetch("captured_at")) %></p>
+      <p class="cp-listing-url"><%= listing_page_link(google.fetch("url")) %></p>
+      <%= render "listing_fields", source: google, google: true %>
+    </section>
+    <section class="cp-listing-source" aria-labelledby="article-source">
+      <h3 id="article-source"><%= page["status"] == "redirected" ? "Where the article address leads today" : "On the ranking page today" %></h3>
+      <p class="cp-note">Page checked <%= listing_check_time(page["checked_at"].presence || report.fetch("checked_at")) %></p>
+      <% if page["status"] == "redirected" %>
+        <% destination = page["destination"] || {} %>
+        <% Array(page["redirects"]).each do |hop| %>
+          <p class="cp-listing-url">Redirect <strong>HTTP <%= hop["status"] %></strong> to <%= listing_page_link(hop["location"]) %></p>
+        <% end %>
+        <p>The original address redirects. It has no current article title or description to compare with the saved result.</p>
+        <% if destination["status"] == "observed" %>
+          <strong>Destination page wording</strong>
+          <%= render "listing_fields", source: destination, google: false %>
+        <% elsif destination["reason"].present? %>
+          <p><%= destination["reason"] %></p>
+        <% end %>
+      <% elsif page["status"] == "observed" %>
+        <p class="cp-listing-url"><%= listing_page_link(page.fetch("url")) %></p>
+        <%= render "listing_fields", source: page, google: false %>
+        <p><%= %w[title description].map { |field| listing_field_comparison(field, report.fetch("comparison")) }.join(" ") %></p>
+      <% else %>
+        <p><%= page["reason"].presence || "The ranking page could not be read." %></p>
+      <% end %>
+    </section>
+  </div>
+  <% if (archive = report["archive"]).present? %>
+    <section class="cp-article-archive" aria-labelledby="article-archive">
+      <h3 id="article-archive">Last saved copy of the original article</h3>
+      <p class="cp-note">Saved <%= listing_check_time(archive.fetch("captured_at")) %><% if archive["snapshot_id"].present? %> · <%= link_to "View saved evidence", source_snapshot_path(archive.fetch("snapshot_id")) %><% end %></p>
+      <p><%= %w[title description].map { |field| listing_field_comparison(field, archive.fetch("comparison")) }.join(" ") %></p>
+      <% if archive["snippet_in_body"] %>
+        <p>The visible words in Google’s snippet also appear in the saved article text.</p>
+      <% end %>
+      <% if (prior = archive["prior_redirect"]).present? %>
+        <p>The same redirect was recorded on <%= listing_check_time(prior.fetch("captured_at")) %>, before Google showed the old address in this search.</p>
+      <% end %>
+      <dl class="cp-listing-fields">
+        <dt>Saved article title</dt><dd><%= listing_field_value(archive, "title", google: false) %></dd>
+      </dl>
+      <details class="cp-advice-evidence"><summary>Saved description and article wording</summary>
+        <dl class="cp-listing-fields">
+          <dt>Saved meta description</dt><dd><%= listing_field_value(archive, "description", google: false) %></dd>
+          <% if archive["matched_passage"].present? %>
+            <dt>Saved passage containing the snippet wording</dt><dd><%= archive["matched_passage"] %></dd>
+          <% end %>
+        </dl>
+      </details>
+    </section>
+  <% end %>
+  <section class="cp-article-action" aria-labelledby="article-next-step">
+    <h3 id="article-next-step">Homepage link</h3>
+    <p><%= draft.fetch("link_instruction") %></p>
+    <% if (link = report["link"]) && link["anchor"].present? %>
+      <p class="cp-note">Existing link · “<%= link["anchor"] %>”<%= " · #{link['placement']}" if link["placement"].present? %><%= " · #{link['section']}" if link["section"].present? %></p>
+    <% end %>
+    <% if Array(draft["edits"]).any? %>
+      <h3>Exact edits</h3>
+      <ul class="cp-article-edits">
+        <% draft.fetch("edits").each do |edit| %>
+          <li><strong><%= edit.fetch("label") %></strong>
+            <p><%= edit.fetch("after") %></p>
+            <% if edit["before"].present? %>
+              <details><summary>Current wording</summary><p><%= edit["before"] %></p></details>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+    <% if draft["guidance_url"] == CompetingPages::ListingDraft::ASA_GUIDANCE %>
+      <p><%= link_to "Read UK advertising guidance", draft["guidance_url"], target: "_blank", rel: "noopener noreferrer" %></p>
+    <% end %>
+    <% if draft["instructions"].present? %>
+      <%= render "developer_handoff", field_id: "ranking-article-handoff", instructions: draft["instructions"], button_label: "Copy ranking page instructions" %>
+    <% end %>
+  </section>
+  <% if can_manage_site? %><%= render "article_check_form", label: "Check ranking page again" %><% end %>
+</section>

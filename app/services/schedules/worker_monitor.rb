@@ -3,6 +3,8 @@ module Schedules
     # These are the application's shared checks. Only their timing is public to
     # the workspace; job arguments, individual executions and hostnames stay private.
     NAMES = {
+      "seo_workflow_notifications" => "SEO task notifications",
+      "seo_workflow_schedules" => "SEO task scheduling",
       "tracking_slot_dispatch" => "Keyword rank collection",
       "search_console_daily" => "Search Console refresh",
       "analytics_daily" => "Google Analytics refresh",
@@ -14,6 +16,10 @@ module Schedules
       "clear_finished_jobs" => "Completed job cleanup"
     }.freeze
     PROCESS_KINDS = %w[Worker Scheduler Dispatcher].freeze
+
+    def self.worker_available?(now: Time.current)
+      SolidQueue::Process.where(kind: "Worker", last_heartbeat_at: (now - 3.minutes)..now).exists?
+    end
 
     def self.online?(now: Time.current)
       active = SolidQueue::Process.where(kind: PROCESS_KINDS, last_heartbeat_at: (now - 3.minutes)..now).distinct.pluck(:kind)

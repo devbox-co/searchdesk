@@ -25,6 +25,9 @@ class ProjectImport
       raise Error, "Unexpected fields: #{(values.keys - fields).join(', ')}" if (values.keys - fields).any?
       raise Error, "Missing fields: #{(required - values.keys).join(', ')}" if (required - values.keys).any?
       normalize!(values)
+      if values["provider"] == SeoWorkflows::EvidenceImport::PROVIDER
+        raise Error, "Use SEO tasks to import workflow evidence"
+      end
       key = values.slice(*identity)
       raise Error, "Duplicate identifier within this file" if seen[key]
       seen[key] = true

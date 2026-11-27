@@ -11,10 +11,11 @@ module Schedules
       search = @site.search_console_connection
       analytics = @site.analytics_connection
       falcon = @site.local_falcon_connection
+      search_import = import_row("search-console", "Google Search Console", search, search_console_path,
+        scope_ready: SearchConsole::Client.matches?(search&.property, @site.host),
+        operator_ready: SearchConsole::Client.configured?, attempt: search&.sync_started_at)
       [
-        import_row("search-console", "Google Search Console", search, search_console_path,
-          scope_ready: SearchConsole::Client.matches?(search&.property, @site.host),
-          operator_ready: SearchConsole::Client.configured?, attempt: search&.sync_started_at),
+        search_import, competing_pages_row(search, search_import),
         import_row("analytics", "Google Analytics 4", analytics, analytics_path,
           scope_ready: analytics&.property_id.present? && analytics&.verified_host == @site.host,
           operator_ready: Analytics::Client.configured?, attempt: analytics&.sync_started_at),
@@ -25,6 +26,42 @@ module Schedules
     end
 
     private
+
+    def competing_pages_row(connection, import)
+      success = connection&.page_week_synced_at
+      attempt = connection&.page_week_attempted_at
+      row = {key: "competing-pages", name: "Competing pages", group: :analysis,
+        frequency: "Weekly, once Search Console has reported a full week",
+        last_at: success, last_label: success ? "Weekly search data saved" : "No weekly check recorded",
+        next_at: nil, next_label: "Checked after each successful Search Console import.",
+        path: competing_pages_path, link_label: "Review competing pages"}
+      if attempt && (!success || attempt > success)
+        row.merge!(last_at: attempt, last_label: "Latest collection attempt")
+      end
+      if ["Not connected", "Reconnect", "Setup needed"].include?(import[:status])
+        return row.merge(status: import[:status], tone: import[:tone], next_label: import[:next_label])
+      end
+      country = SearchConsole::DailyPositions.country_for(@site)
+      return row.merge(status: "Setup needed", tone: :warning, next_label: "Choose a reporting country in Search Console.") unless country
+      return row.merge(status: "No keywords", tone: :idle, next_label: "Add a keyword to start.") unless @site.keywords.exists?
+      if connection.page_week_sync_key.present? && attempt && attempt > @now - SearchConsole::CompetingPageSync::LEASE
+        return row.merge(status: "Collecting", tone: :active, next_label: "This check is running.")
+      end
+      if connection.page_week_error.present? || connection.page_week_sync_key.present?
+        return row.merge(status: "Retry pending", tone: :warning, detail: success ? "Last successful collection on #{local_stamp(success)}." : nil)
+      end
+      unless connection.status == "connected" && connection.data_through
+        return row.merge(status: "Waiting for Search Console", tone: :idle)
+      end
+      sync = SearchConsole::CompetingPageSync
+      last_week = sync.latest_week(connection.data_through, now: @now)
+      partial = SearchConsolePageWeek.where(site: @site, property: connection.property, country: country, partial: true,
+        query: sync.tracked_keywords(@site).select("LOWER(phrase)"),
+        week_start: (last_week - 7 * (sync::WEEKS - 1))..last_week).exists?
+      return row.merge(status: "Some data incomplete", tone: :warning, detail: "Incomplete checks are retried after 24 hours.") if partial
+
+      row.merge(status: success ? "Enabled" : "Awaiting first check", tone: success ? :good : :idle)
+    end
 
     def import_row(key, name, connection, path, scope_ready:, operator_ready:, attempt:, interval: 24.hours)
       success = connection&.synced_at

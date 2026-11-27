@@ -1,0 +1,121 @@
+<section class="schedule-section">
+  <h2>This week at a glance</h2>
+  <p><%= weekly.fetch("start") %> through <%= weekly.fetch("end") %> compared with <%= weekly.fetch("previous_start") %> through <%= weekly.fetch("previous_end") %>. <strong><%= weekly.fetch("coverage").humanize %> coverage</strong>.</p>
+  <p><%= weekly.fetch("status") %></p>
+  <h3>Main finding</h3>
+  <p><%= weekly.fetch("finding") %></p>
+</section>
+<section class="schedule-section">
+  <h2>Week-over-week measures</h2>
+  <dl class="weekly-measures">
+    <% organic = weekly.fetch("organic") %>
+    <div>
+      <dt>Organic rankings</dt>
+      <dd>
+        <% if organic.fetch("pairs").positive? %>
+          <% counts = organic.fetch("counts") %>
+          <p>↑ <%= counts.fetch("improved") %> improved · ↓ <%= counts.fetch("declined") %> declined · → <%= counts.fetch("steady") %> steady</p>
+          <% if counts.fetch("outside").positive? %><p><%= counts.fetch("outside") %> outside the tracked range in both samples.</p><% end %>
+          <% if organic.fetch("changes").any? %>
+            <details>
+              <summary>View comparable keyword readings</summary>
+              <ul>
+                <% organic.fetch("changes").each do |change| %>
+                  <% before = change.fetch("previous") %>
+                  <% after = change.fetch("current") %>
+                  <li><%= change.fetch("term") %> · <%= change.fetch("device").capitalize %> ·
+                    <%= before["position"] || "Outside tracked results" %> on <%= before.fetch("date") %> →
+                    <%= after["position"] || "Outside tracked results" %> on <%= after.fetch("date") %>
+                    <%= link_to "View keyword history", change.fetch("source_path"), class: "schedule-source-link" %></li>
+                <% end %>
+              </ul>
+            </details>
+          <% end %>
+        <% else %>
+          <p>Comparable organic readings were unavailable.</p>
+        <% end %>
+      </dd>
+    </div>
+    <% maps = weekly.fetch("maps") %>
+    <div>
+      <dt>Visibility across your Maps grid</dt>
+      <dd>
+        <% if (current = maps["current"]) %>
+          <p><%= maps.fetch("keyword") %> · <%= current.fetch("date") %></p>
+          <% previous = maps.fetch("previous", {}) %>
+          <% if current["share"] %>
+            <p>Top-three coverage <%= number_to_percentage(current["share"], precision: 2, strip_insignificant_zeros: true) %>
+              <%= render "seo_workflows/weekly_direction", current: current["share"], previous: previous["share"], lower_is_better: false, unit: "%" %></p>
+          <% end %>
+          <% if current["average_rank"] %>
+            <p>Average rank across the grid <%= current["average_rank"] %>
+              <%= render "seo_workflows/weekly_direction", current: current["average_rank"], previous: previous["average_rank"], lower_is_better: true, unit: "" %></p>
+          <% end %>
+          <%= link_to "View saved grid", current.fetch("source_path"), class: "schedule-source-link" %>
+          <% if previous.any? %>
+            <%= link_to "View grid from #{previous.fetch('date')}", previous.fetch("source_path"), class: "schedule-source-link" %>
+          <% else %>
+            <p>A matching grid was unavailable last week.</p>
+          <% end %>
+        <% else %>
+          <p>No verified Maps grid was available for this week.</p>
+        <% end %>
+      </dd>
+    </div>
+    <% pack = weekly.fetch("local_pack") %>
+    <div>
+      <dt>Google Maps top three</dt>
+      <dd>
+        <% if (current = pack["current"]) %>
+          <p><%= [pack["keyword"], pack["market"], pack["device"], current.fetch("date")].compact.join(" · ") %></p>
+          <p><%= current["position"] ? "Position #{current['position']}" : "Outside the sampled top three" %>.
+            <% if (previous = pack["previous"]) %>
+              Previous sample on <%= previous.fetch("date") %> had <%= previous["position"] ? "position #{previous['position']}" : "no matching listing in the top three" %>.
+            <% else %>
+              A comparable sample was unavailable last week.
+            <% end %>
+          </p>
+          <% if current["rating"] %>
+            <p>Google listing rating <%= current["rating"] %> / 5
+              <%= render "seo_workflows/weekly_direction", current: current["rating"], previous: pack.dig("previous", "rating"), lower_is_better: false, unit: "" %></p>
+          <% end %>
+          <%= link_to "View sampled listings", current.fetch("source_path"), class: "schedule-source-link" %>
+          <% if pack["previous"] %><%= link_to "View prior sample", pack.fetch("previous").fetch("source_path"), class: "schedule-source-link" %><% end %>
+        <% else %>
+          <p>No complete top-three sample with a verified business identity was available.</p>
+        <% end %>
+      </dd>
+    </div>
+    <% reviews = weekly.fetch("reviews") %>
+    <div>
+      <dt>Google reviews</dt>
+      <dd>
+        <% if (current = reviews["current"]) %>
+          <% previous = reviews.fetch("previous", {}) %>
+          <p><%= pluralize(current.fetch("new_reviews"), "new review") %>
+            <%= render "seo_workflows/weekly_direction", current: current["new_reviews"], previous: previous["new_reviews"], lower_is_better: false, unit: "" %></p>
+          <% if current["average_rating"] %>
+            <p>Average rating of new reviews <%= current["average_rating"] %> / 5
+              <%= render "seo_workflows/weekly_direction", current: current["average_rating"], previous: previous["average_rating"], lower_is_better: false, unit: "" %></p>
+          <% end %>
+          <% if current.fetch("unanswered_low_rating").positive? %><p><%= current.fetch("unanswered_low_rating") %> unanswered low-rated reviews at collection.</p><% end %>
+          <%= link_to "View weekly review evidence", current.fetch("source_path"), class: "schedule-source-link" %>
+          <% if previous.any? %>
+            <%= link_to "View prior week’s review evidence", previous.fetch("source_path"), class: "schedule-source-link" %>
+          <% else %>
+            <p>A comparable complete review record was unavailable last week.</p>
+          <% end %>
+        <% elsif weekly.fetch("closed_week", true) %>
+          <p>A complete Google review record was unavailable for this week.</p>
+        <% else %>
+          <p>Weekly review totals are available after the week closes and review evidence is saved.</p>
+        <% end %>
+      </dd>
+    </div>
+  </dl>
+</section>
+<section class="schedule-section">
+  <h2>One next action</h2>
+  <% action = weekly.fetch("next_action") %>
+  <p><%= action.fetch("text") %> <%= link_to "Open evidence or setup", action.fetch("source_path"), class: "schedule-source-link" %></p>
+</section>

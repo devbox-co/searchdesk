@@ -10,8 +10,11 @@ module GoogleReadOnly
     AUTH = "https://accounts.google.com/o/oauth2/v2/auth"
     TOKEN = "https://oauth2.googleapis.com/token"
 
+    CLIENT_ID_ENV = "GOOGLE_CLIENT_ID"
+    CLIENT_SECRET_ENV = "GOOGLE_CLIENT_SECRET"
+
     def self.configured?
-      ENV["GOOGLE_CLIENT_ID"].present? && ENV["GOOGLE_CLIENT_SECRET"].present?
+      ENV[self::CLIENT_ID_ENV].present? && ENV[self::CLIENT_SECRET_ENV].present?
     end
 
     def self.callback_url
@@ -24,7 +27,7 @@ module GoogleReadOnly
 
     def self.authorization_url(state:, verifier:)
       challenge = Base64.urlsafe_encode64(Digest::SHA256.digest(verifier), padding: false)
-      "#{AUTH}?#{URI.encode_www_form(client_id: ENV.fetch("GOOGLE_CLIENT_ID"), redirect_uri: callback_url,
+      "#{AUTH}?#{URI.encode_www_form(client_id: ENV.fetch(self::CLIENT_ID_ENV), redirect_uri: callback_url,
         scope: self::SCOPE, response_type: "code", access_type: "offline", prompt: "consent", state: state,
         code_challenge: challenge, code_challenge_method: "S256")}"
     end
@@ -50,10 +53,10 @@ module GoogleReadOnly
     end
 
     def auth_fields
-      { client_id: ENV.fetch("GOOGLE_CLIENT_ID"), client_secret: ENV.fetch("GOOGLE_CLIENT_SECRET") }
+      { client_id: ENV.fetch(self.class::CLIENT_ID_ENV), client_secret: ENV.fetch(self.class::CLIENT_SECRET_ENV) }
     end
 
-    def json_request(url, token: nil, json: nil, form: nil)
+    def json_request(url, token: nil, json: nil, form: nil, http_method: nil)
       uri = URI(url)
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true
@@ -61,7 +64,7 @@ module GoogleReadOnly
       http.read_timeout = 12
       http.write_timeout = 10
       http.max_retries = 0
-      req = (json || form ? Net::HTTP::Post : Net::HTTP::Get).new(uri.request_uri)
+      req = (http_method || (json || form ? Net::HTTP::Post : Net::HTTP::Get)).new(uri.request_uri)
       req["Authorization"] = "Bearer #{token}" if token
       req.set_form_data(form) if form
       if json

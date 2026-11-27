@@ -1,0 +1,37 @@
+<% content_for :title, "Google local pack evidence" %>
+<div class="schedule-view">
+  <header class="rank-heading schedule-page-heading">
+    <div>
+      <h1>Google local pack evidence</h1>
+      <p class="rank-intro"><%= @series.keyword.phrase %> · <%= @series.settings["location"] %> · <%= @series.device %> · <%= @capture.day %></p>
+    </div>
+    <div class="schedule-actions">
+      <%= link_to "Workflow setup", setup_seo_workflows_path(anchor: "P2"), class: "button" %>
+      <%= link_to "Current-period preview", evidence_preview_seo_workflows_path(template: "P2"), class: "button" %>
+    </div>
+  </header>
+
+  <section class="schedule-section">
+    <h2>DataForSEO capture</h2>
+    <% if @sample["coverage"] == "top_three" %>
+      <p>Three unpaid listings were identified in this sample.</p>
+    <% elsif @sample["coverage"] == "partial" %>
+      <p>Partial sample. Some listings could not be identified reliably.</p>
+    <% else %>
+      <p>No identifiable unpaid local pack listings were returned.</p>
+    <% end %>
+    <% if @sample.fetch("listings").any? %>
+      <ul role="list">
+        <% @sample.fetch("listings").each_with_index do |listing, index| %>
+          <li>
+            <strong><%= listing.fetch("name") %></strong>
+            <% if @sample["coverage"] == "top_three" %> · Position <%= index + 1 %><% end %>
+            <% if listing.key?("reviews") %> · <%= listing.fetch("reviews") %> reviews shown<% end %>
+            <% if listing.key?("rating") %> · <%= listing.fetch("rating") %> out of 5<% end %>
+            <% if listing["paid_seen"] %> · Matching sponsored listing observed<% end %>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+  </section>
+</div>

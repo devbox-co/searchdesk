@@ -1,0 +1,83 @@
+<% content_for :title, "Competing pages" %>
+<div class="cp-view">
+  <%= link_to rank_icon_text(:arrow_left, "Actions"), actions_path(keyword_id: @keyword&.id), class: "rank-back" %>
+  <header class="cp-heading">
+    <p class="eyebrow"><%= current_site.name %></p>
+    <h1>Competing pages</h1>
+    <p>Find searches where two of your pages take turns appearing most often on Google. Start with repeated changes where clicks have also fallen.</p>
+  </header>
+  <% if @keywords.any? %>
+    <%= form_with url: competing_pages_path, method: :get, class: "filter cp-filter" do %>
+      <label>Keyword <%= select_tag :keyword_id, options_for_select([["All tracked keywords", ""]] + @keywords.map { |k| [k.phrase, k.id] }, @keyword&.id) %></label>
+      <%= submit_tag "Show results", class: "button" %>
+    <% end %>
+  <% end %>
+  <% if @groups.empty? %>
+    <section class="cp-card">
+      <% if !SearchConsole::Client.matches?(@connection&.property, current_site.host) %>
+        <h2>Connect Search Console to see competing pages</h2>
+        <p>Choose the Google property for this website. Searchdesk can then compare the pages Google shows for each tracked keyword.</p>
+        <%= link_to "View Search Console connection", search_console_path %>
+      <% elsif @country.blank? %>
+        <h2>Choose a country for this comparison</h2>
+        <p>Choose the country your customers search from in Search Console settings.</p>
+        <%= link_to "View Search Console settings", search_console_path %>
+      <% elsif @keywords.empty? %>
+        <h2>Choose your first keyword</h2>
+        <p>Searchdesk compares pages for the keywords you track.</p>
+        <% if can_manage_site? %><%= link_to "Add a keyword", new_keyword_path %><% end %>
+      <% elsif @connection.page_week_error.present? || @connection.status != "connected" %>
+        <h2>Weekly search data needs attention</h2>
+        <p>Check the Search Console connection and the latest sync before relying on this comparison.</p>
+        <%= link_to "View Search Console connection", search_console_path %>
+      <% elsif @latest_week.present? && @connection.page_week_synced_at.present? %>
+        <h2>No competing pair found<%= " for this keyword" if @keyword %></h2>
+        <p>The latest week checked began <%= compact_date(@latest_week) %>. Searchdesk will check again when new weekly data arrives.</p>
+      <% else %>
+        <h2>Waiting for weekly search data</h2>
+        <p>The Search Console sync checks up to eight completed weeks. Page comparisons appear here after that check finishes.</p>
+        <%= link_to "View schedules", schedules_path %>
+      <% end %>
+    </section>
+  <% else %>
+    <p class="cp-source"><%= ui_icon(:globe, size: 15) %> Google Search Console · <%= competition_country(@country) %> · Desktop and mobile reviewed separately</p>
+    <%= render "freshness" %>
+    <% if @groups["review"].blank? %>
+      <div class="cp-verdict">
+        <% if Array(@groups["decided"]).any? { |finding| finding.level == "review" } %>
+          <strong>Every pair with confirmed repeated switching in this view has a saved decision.</strong>
+          <p>You can revisit those pairs under “Your saved decisions”.</p>
+        <% else %>
+          <strong>No confirmed pattern of repeated switching in this view.</strong>
+          <p>Check the pairs below before deciding whether either page needs an edit.</p>
+        <% end %>
+      </div>
+    <% end %>
+    <% [
+      ["review", "Review first", "These pairs changed places at least twice in a run of comparable weeks."],
+      ["watch", "Watch these pages", "Both pages appeared. There is no repeated switching pattern yet."],
+      ["limited", "Limited evidence", "These pairs need more evidence before you decide whether to edit either page."],
+      ["decided", "Your saved decisions", "Searchdesk continues to check these pages."]
+    ].each do |key, heading, description| %>
+      <% next unless (findings = @groups[key]).present? %>
+      <section class="cp-group" aria-label="<%= heading %>">
+        <% if key == "limited" || key == "decided" %><details <%= "open" if @groups.size == 1 || @keyword %>><summary><strong><%= heading %></strong> (<%= findings.size %>)</summary><% else %>
+          <h2><%= heading %> <small>(<%= findings.size %>)</small></h2>
+        <% end %>
+        <p><%= description %></p>
+        <ul class="cp-results">
+          <% findings.each do |finding| %>
+            <li>
+              <div><%= link_to finding.evidence.fetch("query"), competing_page_path(finding, keyword_id: @keyword&.id), class: "cp-keyword", aria: {label: "Review #{finding.evidence.fetch('query')} on #{finding.evidence.fetch('device')}"} %>
+                <span class="cp-device"><%= finding.evidence.fetch("device").capitalize %></span>
+                <p><%= competition_switches(finding) %></p></div>
+              <div class="cp-row-status"><span class="cp-trend cp-<%= finding.evidence.dig("clicks", "trend") %>"><%= competition_clicks(finding.evidence.fetch("clicks")) %></span>
+                <% if key == "decided" %><small><%= competition_decision(finding.disposition) %></small><% end %></div>
+            </li>
+          <% end %>
+        </ul>
+        <% if key == "limited" || key == "decided" %></details><% end %>
+      </section>
+    <% end %>
+  <% end %>
+</div>

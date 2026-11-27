@@ -1,0 +1,6 @@
+<dl class="cp-listing-fields">
+  <dt><%= google ? "Title shown" : "Page title" %></dt>
+  <dd><%= listing_field_value(source, "title", google: google) %></dd>
+  <dt><%= google ? "Snippet shown" : "Meta description" %></dt>
+  <dd><%= listing_field_value(source, "description", google: google) %></dd>
+</dl>

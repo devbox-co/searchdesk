@@ -25,6 +25,12 @@ module AiAssistant
 
     def self.prepare(kind:, question:, evidence:, previous: nil)
       facts = evidence.fetch("facts").dup
+      if kind == "page_advice"
+        instructions, context, schema = CompetingPages::Advice.request(facts)
+        payload = prepare_json(instructions, context, schema, CompetingPages::Advice::RESPONSE_FORMAT)
+        raise Error.new("input_too_large", charge_uncertain: false) if payload.bytesize > MAX_BYTES
+        return prepared(payload, facts, [CompetingPages::Advice::VERSION])
+      end
       item = {
         type: "object", additionalProperties: false, required: %w[fact_ids next_check],
         properties: {
@@ -43,22 +49,26 @@ module AiAssistant
         end
         context = { question: question, previous: previous,
           facts: facts.map { |fact| fact.slice("id", "text", "source") } }.compact
-        json = JSON.generate(model: MODEL, store: false, service_tier: "default",
-          reasoning: { effort: "none" }, max_output_tokens: MAX_OUTPUT, instructions: instructions.join("\n"),
-          input: JSON.generate(context), text: { format: {
-            type: "json_schema", name: "searchdesk_evidence_selection", strict: true, schema: schema
-          } })
-        if json.bytesize <= MAX_BYTES
-          # UTF-8 bytes bound explicit text tokens. Allow extra framing tokens and conservatively
-          # price every input token at the model's highest cache-write rate ($0.25 per million).
-          upper_input = json.bytesize + 4096
-          maximum_cost = (upper_input + 3) / 4 + (MAX_OUTPUT + 1) / 2
-          return Prepared.new(json, facts, maximum_cost, playbooks.map(&:key))
-        end
+        json = prepare_json(instructions.join("\n"), context, schema, "searchdesk_evidence_selection")
+        return prepared(json, facts, playbooks.map(&:key)) if json.bytesize <= MAX_BYTES
         raise Error.new("input_too_large", charge_uncertain: false) if facts.empty?
         facts.pop
       end
     end
+
+    def self.prepare_json(instructions, context, schema, name)
+      JSON.generate(model: MODEL, store: false, service_tier: "default", reasoning: {effort: "none"},
+        max_output_tokens: MAX_OUTPUT, instructions: instructions, input: JSON.generate(context),
+        text: {format: {type: "json_schema", name: name, strict: true, schema: schema}})
+    end
+    private_class_method :prepare_json
+
+    def self.prepared(json, facts, playbooks)
+      # Bound input tokens by UTF-8 bytes plus framing, and reserve at the highest cache-write rate.
+      maximum_cost = (json.bytesize + 4096 + 3) / 4 + (MAX_OUTPUT + 1) / 2
+      Prepared.new(json, facts, maximum_cost, playbooks)
+    end
+    private_class_method :prepared
 
     def call(api_key:, payload:)
       request = Net::HTTP::Post.new(ENDPOINT)

@@ -1,0 +1,54 @@
+#!/bin/sh
+set -eu
+
+revision=c3b7a25b7d5cc370752d74cfea240ccf992a24db
+usage() {
+  cat <<'HELP'
+Usage: SEARCHDESK_LOCAL_SEO_SKILLS_REPO=/absolute/checkout bin/local-seo-skills list
+       SEARCHDESK_LOCAL_SEO_SKILLS_REPO=/absolute/checkout bin/local-seo-skills skill SLUG
+       SEARCHDESK_LOCAL_SEO_SKILLS_REPO=/absolute/checkout bin/local-seo-skills task ID
+HELP
+}
+case "${1:-help}" in
+  help|-h|--help) usage; exit ;;
+  list) [ "$#" -eq 1 ] || { usage >&2; exit 2; } ;;
+  skill|task) [ "$#" -eq 2 ] || { usage >&2; exit 2; } ;;
+  *) usage >&2; exit 2 ;;
+esac
+
+repo=${SEARCHDESK_LOCAL_SEO_SKILLS_REPO:-}
+case "$repo" in
+  /*) ;;
+  *) printf '%s\n' 'Set SEARCHDESK_LOCAL_SEO_SKILLS_REPO to an absolute Local SEO Skills checkout path.' >&2; exit 2 ;;
+esac
+if ! git -C "$repo" cat-file -e "$revision^{commit}"; then
+  printf '%s\n' "Local SEO Skills checkout is missing pinned revision $revision." >&2
+  exit 2
+fi
+
+case "$1" in
+  list)
+    git -C "$repo" ls-tree -r --name-only "$revision" -- skills tasks |
+      awk -F/ 'NF == 3 && $3 == "SKILL.md" { print "skill " $2 }
+               NF == 3 && $3 == "TASK.md" { split($2, parts, "-"); print "task " toupper(parts[1]) " " $2 }'
+    exit ;;
+  skill)
+    case "$2" in
+      ""|*[!a-z0-9-]*) printf '%s\n' 'Use a skill slug from the list command.' >&2; exit 2 ;;
+    esac
+    path="skills/$2/SKILL.md" ;;
+  task)
+    id=$(printf '%s' "$2" | tr '[:upper:]' '[:lower:]')
+    case "$id" in
+      [empr][0-9]) ;;
+      *) printf '%s\n' 'Use a task ID from the list command.' >&2; exit 2 ;;
+    esac
+    path=$(git -C "$repo" ls-tree -r --name-only "$revision" -- tasks |
+      awk -F/ -v prefix="$id-" 'NF == 3 && $3 == "TASK.md" && index($2, prefix) == 1 { print }')
+    ;;
+esac
+if [ -z "$path" ] || ! git -C "$repo" cat-file -e "$revision:$path" 2>/dev/null; then
+  printf '%s\n' 'No published skill or task matches. Use the list command.' >&2
+  exit 2
+fi
+git -C "$repo" show "$revision:$path"
